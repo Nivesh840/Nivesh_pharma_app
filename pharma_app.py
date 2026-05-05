@@ -158,7 +158,8 @@ with t1:
             
             total_amt = cart_df["Total"].sum()
             st.success(f"### Total Amount: ₹{total_amt}")
-            
+          
+           # UNIQUE KEY: 'pos_finalize_btn'  
            if st.button("🚀 Finalize & Print Bill", key="pos_finalize_btn"):
                 try:
                     for item in st.session_state.cart:
