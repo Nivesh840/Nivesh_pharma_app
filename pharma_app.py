@@ -23,18 +23,30 @@ st.markdown("""
 DB_FILES = {"inv": "inventory.csv", "sales": "sales_history.csv", "users": "users.csv"}
 
 def load_enterprise_data():
-    # ... purana code ...
+    # Files initialize karna agar nahi hain
+    if not os.path.exists(DB_FILES["inv"]):
+        pd.DataFrame(columns=["Medicine", "Stock", "Expiry Date", "Unit Price (₹)", "Cost Price (₹)", "Category"]).to_csv(DB_FILES["inv"], index=False)
     
-    # Users file check aur repair logic
+    if not os.path.exists(DB_FILES["sales"]):
+        pd.DataFrame(columns=["Date", "Item", "Qty", "Total", "Profit", "User"]).to_csv(DB_FILES["sales"], index=False)
+
+    # --- USERS FILE REPAIR LOGIC ---
     if not os.path.exists(DB_FILES["users"]):
+        # Nayi file banayein agar exist nahi karti
         pd.DataFrame([{"username": "admin", "password": "pharma2026", "role": "Owner"}]).to_csv(DB_FILES["users"], index=False)
     else:
         try:
-            # File ko read karke check karein
+            # File check karein ki read ho rahi hai ya nahi
             pd.read_csv(DB_FILES["users"])
         except:
-            # Agar error aaye (ParserError), toh file ko reset kar dein
+            # Agar file corrupt hai (ParserError), toh use overwrite karke reset kar dein
             pd.DataFrame([{"username": "admin", "password": "pharma2026", "role": "Owner"}]).to_csv(DB_FILES["users"], index=False)
+
+    inv = pd.read_csv(DB_FILES["inv"])
+    sales = pd.read_csv(DB_FILES["sales"])
+    
+    # Baaki numeric conversion code...
+    return inv, sales
 
 # ==========================================
 # 3. MASTER AUTH & SIGNUP SYSTEM
