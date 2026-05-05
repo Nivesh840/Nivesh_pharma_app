@@ -133,22 +133,36 @@ with t1:
             total_amt = cart_df["Total"].sum()
             st.header(f"Total: ₹{total_amt}")
             
-            if st.button("🚀 Finalize & Print Bill"):
-                # Save Sales & Update Stock
-                for item in st.session_state.cart:
-                    inv.loc[inv["Medicine"] == item["Item"], "Stock"] -= item["Qty"]
-                    new_sale = {
-                        "Date": datetime.datetime.now().strftime("%Y-%m-%d %H:%M"),
-                        "Item": item["Item"], "Qty": item["Qty"], "Total": item["Total"],
-                        "Profit": item["Total"] - (item["Qty"] * item["Cost"]), "User": st.session_state.username
-                    }
-                    sales = pd.concat([sales, pd.DataFrame([new_sale])], ignore_index=True)
-                
-                inv.to_csv("inventory.csv", index=False)
-                sales.to_csv("sales_history.csv", index=False)
-                st.session_state.cart = []
-                st.success("Sale Recorded!")
-                st.rerun()
+            # --- TAB 1: FINALIZING BILL (Updated & Safe Logic) ---
+if st.button("🚀 Finalize & Print Bill"):
+    # Save Sales & Update Stock
+    for item in st.session_state.cart:
+        # Stock Update
+        inv.loc[inv["Medicine"] == item["Item"], "Stock"] -= int(item["Qty"])
+        
+        # Safe Numbers for Profit Calculation
+        item_total = float(item["Total"])
+        item_qty = int(item["Qty"])
+        item_cost = float(item["Cost"])
+        
+        calculated_profit = item_total - (item_qty * item_cost)
+        
+        new_sale = {
+            "Date": datetime.datetime.now().strftime("%Y-%m-%d %H:%M"),
+            "Item": item["Item"], 
+            "Qty": item_qty, 
+            "Total": item_total,
+            "Profit": calculated_profit, 
+            "User": st.session_state.username
+        }
+        sales = pd.concat([sales, pd.DataFrame([new_sale])], ignore_index=True)
+    
+    # Save to Files
+    inv.to_csv("inventory.csv", index=False)
+    sales.to_csv("sales_history.csv", index=False)
+    st.session_state.cart = []
+    st.success("✅ Transaction Successful!")
+    st.rerun()
 
 # --- TAB 2: INVENTORY PRO ---
 with t2:
