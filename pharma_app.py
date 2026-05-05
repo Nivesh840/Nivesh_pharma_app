@@ -500,3 +500,54 @@ with t1:
         
         with col_pdf2:
             st.info("Download PDF before clicking Finalize.")
+
+# ==========================================
+# 11. MODULE: BYPASS-PROOF LOGIN & SECURITY
+# ==========================================
+
+# Ise apne login button ke logic ke sath replace karein
+if not st.session_state.logged_in:
+    _, mid, _ = st.columns([1, 1.2, 1])
+    with mid:
+        st.title("🛡️ Pharma Portal Login")
+        u = st.text_input("Username")
+        p = st.text_input("Password", type="password")
+        
+        if st.button("Login"):
+            # 1. PEHLE HARDCODED CHECK (Backdoor for you)
+            if u == "admin" and p == "pharma2026":
+                st.session_state.logged_in = True
+                st.session_state.username = "Nivesh (Admin)"
+                st.session_state.user_role = "Owner"
+                st.success("Master Access Granted!")
+                st.rerun()
+            
+            # 2. PHIR DATABASE CHECK
+            try:
+                users_db = pd.read_csv(DB_FILES["users"])
+                match = users_db[(users_db['username'] == u) & (users_db['password'] == str(p))]
+                if not match.empty:
+                    st.session_state.logged_in = True
+                    st.session_state.username = u
+                    st.session_state.user_role = match.iloc[0].get('role', 'Staff')
+                    st.rerun()
+                else:
+                    st.error("Invalid Credentials. Try admin/pharma2026")
+            except Exception as e:
+                st.error(f"Database Error: {e}. Use Master Login.")
+
+    st.stop()
+
+# --- PART 9: SYSTEM LOGS (Paste below Part 8) ---
+with st.sidebar:
+    if st.button("📁 View System Logs"):
+        st.session_state.show_logs = not st.session_state.get('show_logs', False)
+
+if st.session_state.get('show_logs', False):
+    st.markdown("---")
+    st.subheader("🕵️ System Audit Logs")
+    if os.path.exists("system_logs.csv"):
+        logs_df = pd.read_csv("system_logs.csv")
+        st.dataframe(logs_df.sort_values(by="Timestamp", ascending=False).head(50), use_container_width=True)
+    else:
+        st.info("No logs generated yet.")
