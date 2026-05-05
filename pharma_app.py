@@ -109,20 +109,6 @@ t1, t2, t3, t4 = st.tabs(["🛒 Super POS", "📦 Inventory Pro", "🌿 AI Herba
 # --- TAB 1: SUPER POS (FAST BILLING) ---
 with t1:
     col_a, col_b = st.columns([1, 1.2])
-    with col_a:
-        st.subheader("Quick Billing")
-        if not inv.empty:
-            med = st.selectbox("Select Med", inv["Medicine"].unique())
-            med_data = inv[inv["Medicine"] == med].iloc[0]
-            qty = st.number_input("Quantity", 1, int(med_data["Stock"]))
-            
-            if st.button("➕ Add to Cart"):
-                if 'cart' not in st.session_state: st.session_state.cart = []
-                st.session_state.cart.append({
-                    "Item": med, "Qty": qty, "Price": med_data["Unit Price (₹)"],
-                    "Cost": med_data["Cost Price (₹)"], "Total": qty * med_data["Unit Price (₹)"]
-                })
-                st.toast("Item Added!")
         
     with col_b:
         st.subheader("Invoice Summary")
