@@ -160,18 +160,18 @@ with t1:
             st.success(f"### Total Amount: ₹{total_amt}")
           
            # UNIQUE KEY: 'pos_finalize_btn'  
-           if st.button("🚀 Finalize & Print Bill", key="pos_finalize_btn"):
+         if st.button("🚀 Finalize & Print Bill", key="pos_finalize_btn"):
                 try:
                     for item in st.session_state.cart:
-                        # 1. Sabse pehle values ko number mein badlo
+                        # 1. Sabse pehle values ko number mein badlo (FORCE CONVERSION)
                         try:
                             # Price aur Total ko decimal (float) banao
                             i_total = float(item.get("Total", 0))
                             i_cost = float(item.get("Cost", 0))
-                            # Qty ko bina decimal wala number (int) banao
+                            # Qty ko integer (int) banao
                             i_qty = int(item.get("Qty", 0))
                         except (ValueError, TypeError):
-                            # Agar conversion fail ho toh safely 0 maan lo
+                            # Agar data kharab hai toh safely 0 maan lo
                             i_total, i_cost, i_qty = 0.0, 0.0, 0
                         
                         # 2. Stock update (Safely)
@@ -194,7 +194,7 @@ with t1:
                     inv.to_csv("inventory.csv", index=False)
                     sales.to_csv("sales_history.csv", index=False)
                     
-                    # 5. Cart khali karo aur khushiyan manao
+                    # 5. Cart khali karo aur restart karo
                     st.session_state.cart = []
                     st.balloons()
                     st.success("✅ Bill Finalized! Stock Updated.")
