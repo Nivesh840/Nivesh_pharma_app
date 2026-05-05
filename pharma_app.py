@@ -96,7 +96,7 @@ if not st.session_state.logged_in:
 st.title(f"🚀 Nivesh Pharma Ultra (User: {st.session_state.username})")
 
 # Tabs Setup
-t1, t2, t3, t4 = st.tabs(["🛒 Super POS", "📦 Inventory Pro", "🌿 AI Herbal Lab", "📈 Analytics"]))
+t1, t2, t3, t4 = st.tabs(["🛒 Super POS", "📦 Inventory Pro", "🌿 AI Herbal Lab", "📈 Analytics"])
 
 # ==========================================
 # 4. MODULE: ADVANCED POS SYSTEM
