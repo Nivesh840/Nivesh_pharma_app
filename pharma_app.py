@@ -133,17 +133,23 @@ with t1:
             total_amt = cart_df["Total"].sum()
             st.header(f"Total: ₹{total_amt}")
             
-            # --- TAB 1: FINALIZING BILL (Updated & Safe Logic) ---
+            # --- TAB 1: FINALIZING BILL (Safe Conversion) ---
 if st.button("🚀 Finalize & Print Bill"):
-    # Save Sales & Update Stock
     for item in st.session_state.cart:
         # Stock Update
         inv.loc[inv["Medicine"] == item["Item"], "Stock"] -= int(item["Qty"])
         
-        # Safe Numbers for Profit Calculation
-        item_total = float(item["Total"])
-        item_qty = int(item["Qty"])
-        item_cost = float(item["Cost"])
+        # --- SAFE CONVERSION LOGIC ---
+        try:
+            item_total = float(item.get("Total", 0))
+            item_qty = int(item.get("Qty", 1))
+            # Agar Cost khali hai ya galat hai, toh 0.0 maan lega
+            cost_val = item.get("Cost", 0)
+            item_cost = float(cost_val) if str(cost_val).strip() != "" else 0.0
+        except ValueError:
+            item_total = 0.0
+            item_qty = 0
+            item_cost = 0.0
         
         calculated_profit = item_total - (item_qty * item_cost)
         
@@ -163,7 +169,6 @@ if st.button("🚀 Finalize & Print Bill"):
     st.session_state.cart = []
     st.success("✅ Transaction Successful!")
     st.rerun()
-
 # --- TAB 2: INVENTORY PRO ---
 with t2:
     st.subheader("Stock Management")
