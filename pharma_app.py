@@ -35,13 +35,10 @@ def load_enterprise_data():
 
     # 2. USERS FILE VALIDATION & EMERGENCY RESET
     try:
-        # File ko read karne ki koshish
         test_users = pd.read_csv(DB_FILES["users"])
-        # Agar file khali hai ya columns gayab hain (ParserError trigger point)
         if test_users.empty or "username" not in test_users.columns:
             raise ValueError("Corrupt File")
     except Exception as e:
-        # Agar koi bhi error aaye, file ko delete karke fresh start karein
         if os.path.exists(DB_FILES["users"]):
             os.remove(DB_FILES["users"])
         pd.DataFrame([{"username": "admin", "password": "pharma2026", "role": "Owner"}]).to_csv(DB_FILES["users"], index=False)
@@ -49,13 +46,17 @@ def load_enterprise_data():
     # 3. Final Load
     inv = pd.read_csv(DB_FILES["inv"])
     sales = pd.read_csv(DB_FILES["sales"])
-    users_final = pd.read_csv(DB_FILES["users"]) # Ab ye kabhi fail nahi hoga
     
     # Force Numeric (Data Integrity)
     for col in ["Unit Price (₹)", "Cost Price (₹)", "Stock"]:
         if col in inv.columns: inv[col] = pd.to_numeric(inv[col], errors='coerce').fillna(0)
+    for col in ["Total", "Profit", "Qty"]:
+        if col in sales.columns: sales[col] = pd.to_numeric(sales[col], errors='coerce').fillna(0)
     
     return inv, sales
+
+# --- GLOBAL DATA LOAD (Error Fix: Ise yahan hona zaroori hai) ---
+inv, sales = load_enterprise_data()[cite: 2]
 
 # ==========================================
 # 3. MASTER AUTH & SIGNUP SYSTEM (REPAIRED)
@@ -64,18 +65,13 @@ if 'logged_in' not in st.session_state:
     st.session_state.logged_in = False
     st.session_state.username = ""
 
-# --- SAFETY CHECK: Users file ko read karne se pehle verify karein ---
 def get_safe_users_db():
     try:
         if not os.path.exists(DB_FILES["users"]):
             pd.DataFrame([{"username": "admin", "password": "pharma2026", "role": "Owner"}]).to_csv(DB_FILES["users"], index=False)
-        
         db = pd.read_csv(DB_FILES["users"])
-        if db.empty or "username" not in db.columns:
-            raise ValueError("Corrupt")
         return db
     except:
-        # Agar file kharab hai toh turant reset karein
         pd.DataFrame([{"username": "admin", "password": "pharma2026", "role": "Owner"}]).to_csv(DB_FILES["users"], index=False)
         return pd.read_csv(DB_FILES["users"])
 
@@ -93,14 +89,12 @@ if not st.session_state.logged_in:
             if auth_mode == "Login":
                 u_input = st.text_input("Username", key="login_u")
                 p_input = st.text_input("Password", type="password", key="login_p")
-                
                 if st.button("🚀 Access Dashboard", use_container_width=True):
                     if u_input == "admin" and p_input == "pharma2026":
                         st.session_state.logged_in = True
                         st.session_state.username = "Nivesh (Admin)"
                         st.rerun()
                     else:
-                        # SAFE LOADING - Yahan error nahi aayega ab
                         users_db = get_safe_users_db()
                         match = users_db[(users_db['username'] == u_input) & (users_db['password'].astype(str) == str(p_input))]
                         if not match.empty:
@@ -109,12 +103,10 @@ if not st.session_state.logged_in:
                             st.rerun()
                         else:
                             st.error("Invalid Credentials!")
-            
-            else: # SIGN UP MODE
+            else:
                 new_u = st.text_input("Choose Username", key="signup_u")
                 new_p = st.text_input("Choose Password", type="password", key="signup_p")
                 new_r = st.selectbox("Your Role", ["Staff", "Manager", "Intern"], key="signup_r")
-                
                 if st.button("📝 Create My Account", use_container_width=True):
                     if new_u and new_p:
                         users_db = get_safe_users_db()
@@ -139,10 +131,10 @@ def generate_pdf_bill(customer_name, cart_items, total_amount):
         pdf.set_text_color(35, 134, 54) 
         pdf.cell(190, 15, "NIVESH PHARMA ULTRA v3.0", ln=True, align='C')
         pdf.set_font("Arial", '', 10)
-        pdf.set_text_color(0, 0, 0)
         pdf.cell(190, 5, f"Date: {datetime.datetime.now().strftime('%Y-%m-%d %H:%M')}", ln=True, align='C')
         pdf.ln(10)
         pdf.set_font("Arial", 'B', 12)
+        pdf.set_text_color(0, 0, 0)
         pdf.cell(190, 10, f"Customer: {str(customer_name)}", ln=True)
         pdf.line(10, pdf.get_y(), 200, pdf.get_y())
         pdf.ln(5)
@@ -183,9 +175,6 @@ def generate_pdf_bill(customer_name, cart_items, total_amount):
 st.title(f"🚀 Nivesh Pharma Ultra (User: {st.session_state.username})")
 t1, t2, t3, t4 = st.tabs(["🛒 Super POS", "📦 Inventory Pro", "🌿 AI Herbal Lab", "📈 Analytics"])
 
-# ==========================================
-# 5. MODULE: ADVANCED POS SYSTEM
-# ==========================================
 with t1:
     if 'cart' not in st.session_state: st.session_state.cart = []
     pos_l, pos_r = st.columns([1, 1.2])
@@ -222,9 +211,6 @@ with t1:
                 inv.to_csv(DB_FILES["inv"], index=False); sales.to_csv(DB_FILES["sales"], index=False)
                 st.session_state.cart = []; st.success("Sale Recorded!"); st.rerun()
 
-# ==========================================
-# 6. MODULE: INVENTORY PRO
-# ==========================================
 with t2:
     st.markdown("### 📦 Inventory Pro")
     inv_tab1, inv_tab2 = st.tabs(["➕ Add New Stock", "📊 Current Inventory"])
@@ -245,9 +231,6 @@ with t2:
     with inv_tab2:
         st.dataframe(inv, use_container_width=True)
 
-# ==========================================
-# 7. MODULE: AI HERBAL LAB
-# ==========================================
 with t3:
     st.markdown("### 🌿 AI Botanical Analysis")
     herb_query = st.text_input("Enter Herb or Chemical Name")
@@ -258,9 +241,6 @@ with t3:
             st.markdown(response.text)
         else: st.error("GEMINI_API_KEY missing in Streamlit Secrets!")
 
-# ==========================================
-# 8. MODULE: ANALYTICS
-# ==========================================
 with t4:
     st.markdown("### 📈 Business Analytics")
     if not sales.empty:
@@ -271,64 +251,27 @@ with t4:
         st.plotly_chart(px.bar(sales.groupby('Item')['Qty'].sum().reset_index(), x='Item', y='Qty', title="Sales by Item"))
     else: st.info("No sales data recorded yet.")
 
-# ==========================================
-# 9. SIDEBAR: ADMIN TOOLS, BACKUP & LOGOUT
-# ==========================================
 with st.sidebar:
     st.image("https://cdn-icons-png.flaticon.com/512/3209/3209101.png", width=50)
     st.title("Control Panel")
     st.write(f"Logged in as: **{st.session_state.username}**")
-    
     st.markdown("---")
     st.subheader("🛠️ Management Tools")
-    
-    # 1. View Logs Toggle
     if st.button("📁 View System Activity", use_container_width=True):
         st.session_state.show_logs = not st.session_state.get('show_logs', False)
-
     st.markdown("---")
     st.subheader("💾 Emergency Backup")
-    st.caption("Download data as CSV files")
-    
-    # Inventory Backup Button
-    st.download_button(
-        "📥 Backup Inventory",
-        data=inv.to_csv(index=False).encode('utf-8'),
-        file_name=f"Backup_Inv_{datetime.date.today()}.csv",
-        mime="text/csv",
-        use_container_width=True
-    )
-    
-    # Sales Backup Button
-    st.download_button(
-        "📥 Backup Sales",
-        data=sales.to_csv(index=False).encode('utf-8'),
-        file_name=f"Backup_Sales_{datetime.date.today()}.csv",
-        mime="text/csv",
-        use_container_width=True
-    )
-
-    # User Database Backup (Only for Admin)
+    st.download_button("📥 Backup Inventory", data=inv.to_csv(index=False).encode('utf-8'), file_name=f"Backup_Inv_{datetime.date.today()}.csv", mime="text/csv", use_container_width=True)
+    st.download_button("📥 Backup Sales", data=sales.to_csv(index=False).encode('utf-8'), file_name=f"Backup_Sales_{datetime.date.today()}.csv", mime="text/csv", use_container_width=True)
     if st.session_state.username == "Nivesh (Admin)":
         if os.path.exists(DB_FILES["users"]):
-            st.download_button(
-                "👤 Backup Users DB",
-                data=pd.read_csv(DB_FILES["users"]).to_csv(index=False).encode('utf-8'),
-                file_name=f"Backup_Users_{datetime.date.today()}.csv",
-                mime="text/csv",
-                use_container_width=True
-            )
-
+            st.download_button("👤 Backup Users DB", data=pd.read_csv(DB_FILES["users"]).to_csv(index=False).encode('utf-8'), file_name=f"Backup_Users_{datetime.date.today()}.csv", mime="text/csv", use_container_width=True)
     st.markdown("---")
-    # 3. Secure Logout Button
     if st.button("🔴 Secure Logout", use_container_width=True):
-        for key in list(st.session_state.keys()):
-            del st.session_state[key]
+        for key in list(st.session_state.keys()): del st.session_state[key]
         st.rerun()
-        
     st.caption(f"v3.0.1 Stable | Nivesh Pharma Enterprise")
 
-# --- Logs Display Logic (Dashboard ke bilkul niche) ---
 if st.session_state.get('show_logs', False):
     st.markdown("---")
     st.subheader("🕵️ Enterprise Audit Logs")
