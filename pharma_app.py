@@ -171,18 +171,29 @@ with t2:
                 st.rerun()
     st.dataframe(inv, use_container_width=True)
 
-# --- TAB 3: AI HERBAL LAB (Semester Project Special) ---
+# --- TAB 3: AI HERBAL LAB (B.Pharm Project Special) ---
 with t3:
     st.subheader("🌿 AI Botanical & Clinical Analysis")
-    herb = st.text_input("Enter Herb/Ingredient Name for Research")
+    herb = st.text_input("Enter Herb/Ingredient Name for Research", key="herb_input")
+    
     if herb:
-        if st.button("Run AI Analysis"):
+        if st.button("Run AI Analysis", key="ai_btn"):
             with st.spinner("Analyzing Clinical Data..."):
-                # Replace with your actual key
-                client = genai.Client(api_key="YOUR_GEMINI_KEY")
-                response = client.models.generate_content(model="gemini-1.5-flash", 
-                           contents=f"Analyze {herb} for B.Pharm project: Uses, Side effects, and Role in Cosmetics.")
-                st.markdown(response.text)
+                try:
+                    # SECRETS SE KEY UTHANA (Sahi Tarika)
+                    if "GEMINI_API_KEY" in st.secrets:
+                        api_val = st.secrets["GEMINI_API_KEY"]
+                        client = genai.Client(api_key=api_val)
+                        
+                        response = client.models.generate_content(
+                            model="gemini-1.5-flash", 
+                            contents=f"Analyze {herb} for B.Pharm project: Uses, Side effects, and Role in Cosmetics in Hinglish."
+                        )
+                        st.markdown(response.text)
+                    else:
+                        st.error("❌ API Key nahi mili! Streamlit Settings > Secrets mein GEMINI_API_KEY dalo.")
+                except Exception as e:
+                    st.error(f"⚠️ AI Connection Error: {e}")
 
 # --- TAB 4: ANALYTICS ---
 with t4:
