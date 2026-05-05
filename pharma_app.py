@@ -23,29 +23,38 @@ st.markdown("""
 DB_FILES = {"inv": "inventory.csv", "sales": "sales_history.csv", "users": "users.csv"}
 
 def load_enterprise_data():
-    # Files initialize karna agar nahi hain
-    if not os.path.exists(DB_FILES["inv"]):
-        pd.DataFrame(columns=["Medicine", "Stock", "Expiry Date", "Unit Price (₹)", "Cost Price (₹)", "Category"]).to_csv(DB_FILES["inv"], index=False)
-    
-    if not os.path.exists(DB_FILES["sales"]):
-        pd.DataFrame(columns=["Date", "Item", "Qty", "Total", "Profit", "User"]).to_csv(DB_FILES["sales"], index=False)
+    # 1. Basic Path Check
+    for f in DB_FILES.values():
+        if not os.path.exists(f):
+            if f == DB_FILES["inv"]:
+                pd.DataFrame(columns=["Medicine", "Stock", "Expiry Date", "Unit Price (₹)", "Cost Price (₹)", "Category"]).to_csv(f, index=False)
+            elif f == DB_FILES["sales"]:
+                pd.DataFrame(columns=["Date", "Item", "Qty", "Total", "Profit", "User"]).to_csv(f, index=False)
+            elif f == DB_FILES["users"]:
+                pd.DataFrame([{"username": "admin", "password": "pharma2026", "role": "Owner"}]).to_csv(f, index=False)
 
-    # --- USERS FILE REPAIR LOGIC ---
-    if not os.path.exists(DB_FILES["users"]):
-        # Nayi file banayein agar exist nahi karti
+    # 2. USERS FILE VALIDATION & EMERGENCY RESET
+    try:
+        # File ko read karne ki koshish
+        test_users = pd.read_csv(DB_FILES["users"])
+        # Agar file khali hai ya columns gayab hain (ParserError trigger point)
+        if test_users.empty or "username" not in test_users.columns:
+            raise ValueError("Corrupt File")
+    except Exception as e:
+        # Agar koi bhi error aaye, file ko delete karke fresh start karein
+        if os.path.exists(DB_FILES["users"]):
+            os.remove(DB_FILES["users"])
         pd.DataFrame([{"username": "admin", "password": "pharma2026", "role": "Owner"}]).to_csv(DB_FILES["users"], index=False)
-    else:
-        try:
-            # File check karein ki read ho rahi hai ya nahi
-            pd.read_csv(DB_FILES["users"])
-        except:
-            # Agar file corrupt hai (ParserError), toh use overwrite karke reset kar dein
-            pd.DataFrame([{"username": "admin", "password": "pharma2026", "role": "Owner"}]).to_csv(DB_FILES["users"], index=False)
 
+    # 3. Final Load
     inv = pd.read_csv(DB_FILES["inv"])
     sales = pd.read_csv(DB_FILES["sales"])
+    users_final = pd.read_csv(DB_FILES["users"]) # Ab ye kabhi fail nahi hoga
     
-    # Baaki numeric conversion code...
+    # Force Numeric (Data Integrity)
+    for col in ["Unit Price (₹)", "Cost Price (₹)", "Stock"]:
+        if col in inv.columns: inv[col] = pd.to_numeric(inv[col], errors='coerce').fillna(0)
+    
     return inv, sales
 
 # ==========================================
