@@ -6,6 +6,32 @@ import plotly.express as px
 from google import genai
 from fpdf import FPDF
 
+# --- DATABASE LOADING ---
+def load_data():
+    # 1. Inventory Load karein
+    if os.path.exists("inventory.csv"):
+        inv = pd.read_csv("inventory.csv")
+        # Safety: Numbers ko sahi format mein convert karein
+        inv["Unit Price (₹)"] = pd.to_numeric(inv["Unit Price (₹)"], errors='coerce').fillna(0)
+        inv["Cost Price (₹)"] = pd.to_numeric(inv["Cost Price (₹)"], errors='coerce').fillna(0)
+        inv["Stock"] = pd.to_numeric(inv["Stock"], errors='coerce').fillna(0).astype(int)
+    else:
+        # Agar file nahi hai toh empty DataFrame banayein
+        inv = pd.DataFrame(columns=["Medicine", "Stock", "Expiry Date", "Unit Price (₹)", "Cost Price (₹)", "Category"])
+
+    # 2. Sales History Load karein
+    if os.path.exists("sales_history.csv"):
+        sales = pd.read_csv("sales_history.csv")
+        sales["Total"] = pd.to_numeric(sales["Total"], errors='coerce').fillna(0)
+        sales["Profit"] = pd.to_numeric(sales["Profit"], errors='coerce').fillna(0)
+    else:
+        sales = pd.DataFrame(columns=["Date", "Item", "Qty", "Total", "Profit", "User"])
+        
+    return inv, sales
+
+# Data ko variables mein le lein
+inv, sales = load_data()
+
 # --- 1. SETTINGS & STYLING ---
 st.set_page_config(page_title="Nivesh Pharma Ultra", layout="wide", page_icon="💊")
 
