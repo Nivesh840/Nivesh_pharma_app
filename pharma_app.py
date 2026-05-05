@@ -159,28 +159,48 @@ with t1:
             total_amt = cart_df["Total"].sum()
             st.success(f"### Total Amount: ₹{total_amt}")
             
-            # UNIQUE KEY: 'pos_finalize_btn'
-            if st.button("🚀 Finalize & Print Bill", key="pos_finalize_btn"):
-                for item in st.session_state.cart:
-                    inv.loc[inv["Medicine"] == item["Item"], "Stock"] -= int(item["Qty"])
+           if st.button("🚀 Finalize & Print Bill", key="pos_finalize_btn"):
+                try:
+                    for item in st.session_state.cart:
+                        # 1. Sabse pehle values ko number mein badlo
+                        try:
+                            # Price aur Total ko decimal (float) banao
+                            i_total = float(item.get("Total", 0))
+                            i_cost = float(item.get("Cost", 0))
+                            # Qty ko bina decimal wala number (int) banao
+                            i_qty = int(item.get("Qty", 0))
+                        except (ValueError, TypeError):
+                            # Agar conversion fail ho toh safely 0 maan lo
+                            i_total, i_cost, i_qty = 0.0, 0.0, 0
+                        
+                        # 2. Stock update (Safely)
+                        inv.loc[inv["Medicine"] == item["Item"], "Stock"] -= i_qty
+                        
+                        # 3. Profit calculate karo (Ab error nahi aayega)
+                        calculated_profit = i_total - (i_qty * i_cost)
+                        
+                        new_sale = {
+                            "Date": datetime.datetime.now().strftime("%Y-%m-%d %H:%M"),
+                            "Item": item["Item"], 
+                            "Qty": i_qty, 
+                            "Total": i_total,
+                            "Profit": calculated_profit, 
+                            "User": st.session_state.username
+                        }
+                        sales = pd.concat([sales, pd.DataFrame([new_sale])], ignore_index=True)
                     
-                    new_sale = {
-                        "Date": datetime.datetime.now().strftime("%Y-%m-%d %H:%M"),
-                        "Item": item["Item"], "Qty": item["Qty"], "Total": item["Total"],
-                        "Profit": item["Total"] - (item["Qty"] * item["Cost"]), 
-                        "User": st.session_state.username
-                    }
-                    sales = pd.concat([sales, pd.DataFrame([new_sale])], ignore_index=True)
-                
-                inv.to_csv("inventory.csv", index=False)
-                sales.to_csv("sales_history.csv", index=False)
-                st.session_state.cart = []
-                st.balloons()
-                st.success("Sale Recorded!")
-                st.rerun()
-        else:
-            st.write("Cart is empty.")
-    
+                    # 4. Files save karo
+                    inv.to_csv("inventory.csv", index=False)
+                    sales.to_csv("sales_history.csv", index=False)
+                    
+                    # 5. Cart khali karo aur khushiyan manao
+                    st.session_state.cart = []
+                    st.balloons()
+                    st.success("✅ Bill Finalized! Stock Updated.")
+                    st.rerun()
+                except Exception as e:
+                    st.error(f"❌ Kuch gadbad hui: {e}")
+                    
 # --- TAB 2: INVENTORY PRO ---
 with t2:
     st.subheader("Stock Management")
