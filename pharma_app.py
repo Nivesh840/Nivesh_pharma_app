@@ -28,7 +28,7 @@ def load_enterprise_data():
     if not os.path.exists(DB_FILES["sales"]):
         pd.DataFrame(columns=["Date", "Item", "Qty", "Total", "Profit", "User"]).to_csv(DB_FILES["sales"], index=False)
     if not os.path.exists(DB_FILES["users"]):
-        pd.DataFrame([{"username": "admin", "password": "pharma2026", "role": "Owner", "created_at": str(datetime.date.today())}]).to_csv(DB_FILES["users"], index=False)
+        pd.DataFrame([{"username": "admin", "password": "pharma2026", "role": "Owner"}]).to_csv(DB_FILES["users"], index=False)
 
     inv = pd.read_csv(DB_FILES["inv"])
     sales = pd.read_csv(DB_FILES["sales"])
@@ -96,12 +96,8 @@ if not st.session_state.logged_in:
                         st.error("Please fill all details.")
     st.stop()
 
-# --- DASHBOARD STARTS HERE ---
-st.title(f"🚀 Nivesh Pharma Ultra (User: {st.session_state.username})")
-t1, t2, t3, t4 = st.tabs(["🛒 Super POS", "📦 Inventory Pro", "🌿 AI Herbal Lab", "📈 Analytics"])
-
 # ==========================================
-# 4. MODULE: ADVANCED POS SYSTEM
+# 4. GLOBAL PDF GENERATOR (WITH GST)
 # ==========================================
 def generate_pdf_bill(customer_name, cart_items, total_amount):
     try:
@@ -151,15 +147,24 @@ def generate_pdf_bill(customer_name, cart_items, total_amount):
         st.error(f"PDF Error: {e}")
         return None
 
+# --- DASHBOARD STARTS ---
+st.title(f"🚀 Nivesh Pharma Ultra (User: {st.session_state.username})")
+t1, t2, t3, t4 = st.tabs(["🛒 Super POS", "📦 Inventory Pro", "🌿 AI Herbal Lab", "📈 Analytics"])
+
+# ==========================================
+# 5. MODULE: ADVANCED POS SYSTEM
+# ==========================================
 with t1:
     if 'cart' not in st.session_state: st.session_state.cart = []
     pos_l, pos_r = st.columns([1, 1.2])
     with pos_l:
+        st.subheader("Quick Billing")
         if not inv.empty:
             med_list = inv["Medicine"].unique()
             selected_med = st.selectbox("Search Medicine", med_list)
             m_data = inv[inv["Medicine"] == selected_med].iloc[0]
             stock_left = int(m_data["Stock"])
+            if stock_left < 10: st.warning(f"⚠️ Low Stock: {stock_left} left!")
             c1, c2 = st.columns(2)
             u_price = c1.number_input("Unit Price (₹)", value=float(m_data["Unit Price (₹)"]), disabled=True)
             sel_qty = c2.number_input("Quantity", 1, max(1, stock_left), step=1)
@@ -167,6 +172,7 @@ with t1:
                 st.session_state.cart.append({"Item": selected_med, "Qty": int(sel_qty), "Price": float(u_price), "Cost": float(m_data["Cost Price (₹)"]), "Total": float(sel_qty * u_price)})
                 st.rerun()
     with pos_r:
+        st.subheader("Invoice Summary")
         if st.session_state.cart:
             cart_df = pd.DataFrame(st.session_state.cart)
             st.table(cart_df[["Item", "Qty", "Price", "Total"]])
@@ -182,61 +188,63 @@ with t1:
                     new_sale = {"Date": datetime.datetime.now().strftime("%Y-%m-%d %H:%M"), "Item": item["Item"], "Qty": item["Qty"], "Total": item["Total"], "Profit": item["Total"] - (item["Qty"] * item["Cost"]), "User": st.session_state.username}
                     sales = pd.concat([sales, pd.DataFrame([new_sale])], ignore_index=True)
                 inv.to_csv(DB_FILES["inv"], index=False); sales.to_csv(DB_FILES["sales"], index=False)
-                st.session_state.cart = []; st.success("Sale Recorded!"); time.sleep(1); st.rerun()
+                st.session_state.cart = []; st.success("Sale Recorded!"); st.rerun()
 
 # ==========================================
-# 5. MODULE: INVENTORY PRO
+# 6. MODULE: INVENTORY PRO
 # ==========================================
 with t2:
-    tab_a, tab_b = st.tabs(["➕ Add Stock", "📊 Inventory"])
-    with tab_a:
-        with st.form("inv_form", clear_on_submit=True):
-            n = st.text_input("Medicine Name")
-            c = st.selectbox("Category", ["Tablet", "Syrup", "Herbal", "Cosmetic"])
-            ex = st.date_input("Expiry")
-            s = st.number_input("Stock", min_value=1)
-            cp = st.number_input("Cost Price", min_value=0.0)
-            sp = st.number_input("Selling Price", min_value=0.0)
-            if st.form_submit_button("Save"):
-                new_e = {"Medicine": n.upper(), "Stock": s, "Expiry Date": str(ex), "Unit Price (₹)": sp, "Cost Price (₹)": cp, "Category": c}
-                inv = pd.concat([inv, pd.DataFrame([new_e])], ignore_index=True)
-                inv.to_csv(DB_FILES["inv"], index=False); st.success("Added!"); st.rerun()
-    with tab_b:
+    st.markdown("### 📦 Inventory Pro")
+    inv_tab1, inv_tab2 = st.tabs(["➕ Add New Stock", "📊 Current Inventory"])
+    with inv_tab1:
+        with st.form("inventory_form", clear_on_submit=True):
+            f_col1, f_col2, f_col3 = st.columns(3)
+            m_name = f_col1.text_input("Medicine Name")
+            m_cat = f_col2.selectbox("Category", ["Tablet", "Syrup", "Injection", "Herbal"])
+            m_exp = f_col3.date_input("Expiry Date")
+            f_col4, f_col5, f_col6 = st.columns(3)
+            m_stock = f_col4.number_input("Stock Quantity", min_value=1)
+            m_cost = f_col5.number_input("Cost Price (₹)", min_value=0.0)
+            m_price = f_col6.number_input("Selling Price (₹)", min_value=0.0)
+            if st.form_submit_button("Save Stock"):
+                new_entry = {"Medicine": m_name.upper(), "Stock": int(m_stock), "Expiry Date": str(m_exp), "Unit Price (₹)": float(m_price), "Cost Price (₹)": float(m_cost), "Category": m_cat}
+                inv = pd.concat([inv, pd.DataFrame([new_entry])], ignore_index=True)
+                inv.to_csv(DB_FILES["inv"], index=False); st.success("Stock Added!"); st.rerun()
+    with inv_tab2:
         st.dataframe(inv, use_container_width=True)
 
 # ==========================================
-# 6. MODULE: AI HERBAL LAB
+# 7. MODULE: AI HERBAL LAB
 # ==========================================
 with t3:
-    st.subheader("🌿 AI Botanical Analysis")
-    h_query = st.text_input("Enter Herb Name")
-    if st.button("🔬 Analyze"):
+    st.markdown("### 🌿 AI Botanical Analysis")
+    herb_query = st.text_input("Enter Herb or Chemical Name")
+    if st.button("🔬 Run Analysis"):
         if "GEMINI_API_KEY" in st.secrets:
             client = genai.Client(api_key=st.secrets["GEMINI_API_KEY"])
-            resp = client.models.generate_content(model="gemini-1.5-flash", contents=f"Clinical analysis of {h_query} for B.Pharm in Hinglish.")
-            st.markdown(resp.text)
-        else: st.error("API Key Missing in Secrets!")
+            response = client.models.generate_content(model="gemini-1.5-flash", contents=f"Detail B.Pharm report for {herb_query} in Hinglish.")
+            st.markdown(response.text)
+        else: st.error("GEMINI_API_KEY missing in Streamlit Secrets!")
 
 # ==========================================
-# 7. MODULE: ANALYTICS
+# 8. MODULE: ANALYTICS
 # ==========================================
 with t4:
+    st.markdown("### 📈 Business Analytics")
     if not sales.empty:
-        k1, k2 = st.columns(2)
-        k1.metric("Total Revenue", f"₹{sales['Total'].sum():,.2f}")
-        k2.metric("Total Profit", f"₹{sales['Profit'].sum():,.2f}")
-        st.plotly_chart(px.line(sales, x='Date', y='Total', title="Sales Trend"))
-    else: st.info("No sales data yet.")
+        kpi1, kpi2, kpi3 = st.columns(3)
+        kpi1.metric("Revenue", f"₹{sales['Total'].sum():,.2f}")
+        kpi2.metric("Net Profit", f"₹{sales['Profit'].sum():,.2f}")
+        kpi3.metric("Sales Count", len(sales))
+        st.plotly_chart(px.bar(sales.groupby('Item')['Qty'].sum().reset_index(), x='Item', y='Qty', title="Sales by Item"))
+    else: st.info("No sales data recorded yet.")
 
 # ==========================================
-# 9. SYSTEM LOGS & HEARTBEAT
+# 9. FOOTER & LOGOUT
 # ==========================================
 with st.sidebar:
     st.markdown("---")
-    if st.button("📁 View Logs"): st.session_state.show_logs = not st.session_state.get('show_logs', False)
-    if st.button("🔴 Logout"):
-        for k in list(st.session_state.keys()): del st.session_state[k]
+    if st.button("🔴 Secure Logout"):
+        for key in list(st.session_state.keys()): del st.session_state[key]
         st.rerun()
-
-if st.session_state.get('show_logs', False):
-    if os.path.exists("system_logs.csv"): st.dataframe(pd.read_csv("system_logs.csv"), use_container_width=True)
+    st.caption("v3.0.1 Stable | Nivesh Pharma Enterprise")
