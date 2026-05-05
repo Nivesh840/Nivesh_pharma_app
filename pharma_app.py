@@ -199,11 +199,71 @@ with t1:
                         # 5. Success Message & Receipt Preview
                         st.success(f"Invoice {invoice_id} Saved!")
                         
-                        # Bill Preview for Manual Printing (Ctrl+P)
-                        st.markdown("### 📄 Quick Receipt Preview")
-                        preview_df = pd.DataFrame(current_cart)[["Item", "Qty", "Total"]]
-                        st.table(preview_df)
-                        st.markdown(f"**Total Amount Paid: ₹{sum(item['Total'] for item in current_cart):,.2f}**")
+                        def generate_pdf_bill(customer_name, cart_items, total_amount):
+    try:
+        pdf = FPDF()
+        pdf.add_page()
+        
+        # Branding
+        pdf.set_font("Arial", 'B', 20)
+        pdf.set_text_color(35, 134, 54) 
+        pdf.cell(190, 15, "NIVESH PHARMA ULTRA v3.0", ln=True, align='C')
+        
+        pdf.set_font("Arial", '', 10)
+        pdf.set_text_color(0, 0, 0)
+        pdf.cell(190, 5, f"Date: {datetime.datetime.now().strftime('%Y-%m-%d %H:%M')}", ln=True, align='C')
+        pdf.ln(10)
+        
+        # Customer Info
+        pdf.set_font("Arial", 'B', 12)
+        pdf.cell(190, 10, f"Customer: {str(customer_name)}", ln=True)
+        pdf.line(10, pdf.get_y(), 200, pdf.get_y())
+        pdf.ln(5)
+        
+        # Table Header (Added GST Columns)
+        pdf.set_fill_color(230, 230, 230)
+        pdf.set_font("Arial", 'B', 9)
+        pdf.cell(65, 10, " Medicine", 1, 0, 'L', True)
+        pdf.cell(20, 10, "Qty", 1, 0, 'C', True)
+        pdf.cell(30, 10, "Base (Rs)", 1, 0, 'C', True)
+        pdf.cell(35, 10, "GST (12%)", 1, 0, 'C', True)
+        pdf.cell(40, 10, "Total (Rs)", 1, 1, 'C', True)
+        
+        # Table Body
+        pdf.set_font("Arial", '', 9)
+        grand_total = 0
+        total_gst = 0
+        
+        for item in cart_items:
+            qty = int(item['Qty'])
+            base_price = float(item['Price']) / 1.12  # Reverse calculating base price
+            gst_amount = float(item['Total']) - (base_price * qty)
+            
+            name = str(item['Item']).encode('ascii', 'ignore').decode('ascii')
+            pdf.cell(65, 10, f" {name}", 1)
+            pdf.cell(20, 10, str(qty), 1, 0, 'C')
+            pdf.cell(30, 10, f"{(base_price * qty):.2f}", 1, 0, 'C')
+            pdf.cell(35, 10, f"{gst_amount:.2f}", 1, 0, 'C')
+            pdf.cell(40, 10, f"{float(item['Total']):.2f}", 1, 1, 'C')
+            
+            total_gst += gst_amount
+            grand_total += float(item['Total'])
+        
+        # Financial Breakdown
+        pdf.ln(5)
+        pdf.set_font("Arial", 'B', 11)
+        pdf.cell(150, 8, "Total GST (CGST + SGST):", 0, 0, 'R')
+        pdf.cell(40, 8, f"Rs. {total_gst:.2f}", 1, 1, 'C')
+        
+        pdf.set_font("Arial", 'B', 14)
+        pdf.set_text_color(200, 0, 0)
+        pdf.cell(150, 10, "NET PAYABLE:", 0, 0, 'R')
+        pdf.cell(40, 10, f"Rs. {grand_total:.2f}", 1, 1, 'C')
+        
+        return pdf.output(dest='S').encode('latin-1', errors='ignore')
+    except Exception as e:
+        st.error(f"GST PDF Error: {e}")
+        return None
                         
                         # Cart Khali Karo
                         st.session_state.cart = []
