@@ -240,11 +240,68 @@ with t4:
     else: st.info("No sales data recorded yet.")
 
 # ==========================================
-# 9. FOOTER & LOGOUT
+# 9. SIDEBAR: ADMIN TOOLS, BACKUP & LOGOUT
 # ==========================================
 with st.sidebar:
+    st.image("https://cdn-icons-png.flaticon.com/512/3209/3209101.png", width=50)
+    st.title("Control Panel")
+    st.write(f"Logged in as: **{st.session_state.username}**")
+    
     st.markdown("---")
-    if st.button("🔴 Secure Logout"):
-        for key in list(st.session_state.keys()): del st.session_state[key]
+    st.subheader("🛠️ Management Tools")
+    
+    # 1. View Logs Toggle
+    if st.button("📁 View System Activity", use_container_width=True):
+        st.session_state.show_logs = not st.session_state.get('show_logs', False)
+
+    st.markdown("---")
+    st.subheader("💾 Emergency Backup")
+    st.caption("Download data as CSV files")
+    
+    # Inventory Backup Button
+    st.download_button(
+        "📥 Backup Inventory",
+        data=inv.to_csv(index=False).encode('utf-8'),
+        file_name=f"Backup_Inv_{datetime.date.today()}.csv",
+        mime="text/csv",
+        use_container_width=True
+    )
+    
+    # Sales Backup Button
+    st.download_button(
+        "📥 Backup Sales",
+        data=sales.to_csv(index=False).encode('utf-8'),
+        file_name=f"Backup_Sales_{datetime.date.today()}.csv",
+        mime="text/csv",
+        use_container_width=True
+    )
+
+    # User Database Backup (Only for Admin)
+    if st.session_state.username == "Nivesh (Admin)":
+        if os.path.exists(DB_FILES["users"]):
+            st.download_button(
+                "👤 Backup Users DB",
+                data=pd.read_csv(DB_FILES["users"]).to_csv(index=False).encode('utf-8'),
+                file_name=f"Backup_Users_{datetime.date.today()}.csv",
+                mime="text/csv",
+                use_container_width=True
+            )
+
+    st.markdown("---")
+    # 3. Secure Logout Button
+    if st.button("🔴 Secure Logout", use_container_width=True):
+        for key in list(st.session_state.keys()):
+            del st.session_state[key]
         st.rerun()
-    st.caption("v3.0.1 Stable | Nivesh Pharma Enterprise")
+        
+    st.caption(f"v3.0.1 Stable | Nivesh Pharma Enterprise")
+
+# --- Logs Display Logic (Dashboard ke bilkul niche) ---
+if st.session_state.get('show_logs', False):
+    st.markdown("---")
+    st.subheader("🕵️ Enterprise Audit Logs")
+    if os.path.exists("system_logs.csv"):
+        logs_df = pd.read_csv("system_logs.csv")
+        st.dataframe(logs_df.sort_values(by="Timestamp", ascending=False).head(50), use_container_width=True)
+    else:
+        st.info("System logs are currently empty.")
