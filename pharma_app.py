@@ -421,3 +421,75 @@ st.markdown("---")
 f_left, f_right = st.columns(2)
 f_left.caption(f"Nivesh Pharma Ultra v3.0 | Database Status: Connected ✅")
 f_right.markdown(f"<div style='text-align: right; color: gray;'>Last Sync: {datetime.datetime.now().strftime('%H:%M:%S')}</div>", unsafe_allow_html=True)
+
+# ==========================================
+# 9. MODULE: PDF INVOICE GENERATOR
+# ==========================================
+def generate_pdf_bill(customer_name, cart_items, total_amount):
+    pdf = FPDF()
+    pdf.add_page()
+    
+    # Header: Pharmacy Branding
+    pdf.set_font("Arial", 'B', 20)
+    pdf.set_text_color(35, 134, 54) # Nivesh Pharma Green
+    pdf.cell(190, 15, "NIVESH PHARMA ULTRA v3.0", ln=True, align='C')
+    
+    pdf.set_font("Arial", '', 10)
+    pdf.set_text_color(0, 0, 0)
+    pdf.cell(190, 5, "Authorized Pharmaceutical Retailer & Healthcare Provider", ln=True, align='C')
+    pdf.cell(190, 5, f"Date: {datetime.datetime.now().strftime('%Y-%m-%d %H:%M')}", ln=True, align='C')
+    pdf.ln(10)
+    
+    # Customer Info
+    pdf.set_font("Arial", 'B', 12)
+    pdf.cell(190, 10, f"Customer: {customer_name}", ln=True)
+    pdf.line(10, 50, 200, 50)
+    pdf.ln(5)
+    
+    # Table Header
+    pdf.set_fill_color(240, 240, 240)
+    pdf.set_font("Arial", 'B', 10)
+    pdf.cell(80, 10, " Medicine Name", 1, 0, 'L', True)
+    pdf.cell(30, 10, "Qty", 1, 0, 'C', True)
+    pdf.cell(40, 10, "Price (Rs)", 1, 0, 'C', True)
+    pdf.cell(40, 10, "Total (Rs)", 1, 1, 'C', True)
+    
+    # Table Body
+    pdf.set_font("Arial", '', 10)
+    for item in cart_items:
+        pdf.cell(80, 10, f" {item['Item']}", 1)
+        pdf.cell(30, 10, str(item['Qty']), 1, 0, 'C')
+        pdf.cell(40, 10, f"{item['Price']:.2f}", 1, 0, 'C')
+        pdf.cell(40, 10, f"{item['Total']:.2f}", 1, 1, 'C')
+    
+    # Final Total
+    pdf.ln(5)
+    pdf.set_font("Arial", 'B', 14)
+    pdf.set_text_color(200, 0, 0)
+    pdf.cell(150, 10, "GRAND TOTAL:", 0, 0, 'R')
+    pdf.cell(40, 10, f"Rs. {total_amount:.2f}", 1, 1, 'C')
+    
+    # Footer
+    pdf.ln(20)
+    pdf.set_font("Arial", 'I', 8)
+    pdf.set_text_color(100, 100, 100)
+    pdf.cell(190, 5, "Thank you for choosing Nivesh Pharma. Get well soon!", ln=True, align='C')
+    pdf.cell(190, 5, "This is a computer generated invoice and does not require a physical signature.", ln=True, align='C')
+    
+    return pdf.output(dest='S').encode('latin-1')
+
+# --- Update to Tab 1 (Add this inside the 'if st.session_state.cart' block in Tab 1) ---
+# Paste this right above or below the "Finalize & Print Bill" button in Tab 1
+with t1:
+    if st.session_state.cart:
+        cust_name = st.text_input("Customer Name", "Walking Customer", key="cust_name_input")
+        
+        # Download PDF Button
+        pdf_bytes = generate_pdf_bill(cust_name, st.session_state.cart, pd.DataFrame(st.session_state.cart)["Total"].sum())
+        st.download_button(
+            label="📥 Download PDF Receipt",
+            data=pdf_bytes,
+            file_name=f"Invoice_{datetime.datetime.now().strftime('%Y%m%d_%H%M')}.pdf",
+            mime="application/pdf",
+            key="pdf_download_btn"
+        )
