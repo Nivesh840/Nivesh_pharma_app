@@ -68,13 +68,65 @@ if not st.session_state.logged_in:
             p_input = st.text_input("Password", type="password", key="login_pass")
             
             if st.button("🚀 Access Dashboard", use_container_width=True):
-                # MASTER BYPASS: Ye hamesha chalega chahe CSV ho ya na ho
-                if u_input == "admin" and p_input == "pharma2026":
-                    st.session_state.logged_in = True
-                    st.session_state.username = "Nivesh (Admin)"
-                    st.success("Master Access Granted! Loading...")
-                    time.sleep(1)
-                    st.rerun()
+                # ==========================================
+# 3. MASTER AUTH & SIGNUP SYSTEM
+# ==========================================
+
+if 'logged_in' not in st.session_state:
+    st.session_state.logged_in = False
+
+if not st.session_state.logged_in:
+    _, mid, _ = st.columns([1, 1.2, 1])
+    with mid:
+        st.markdown('<div style="text-align: center;">', unsafe_allow_html=True)
+        st.image("https://cdn-icons-png.flaticon.com/512/3209/3209101.png", width=80)
+        st.title("🛡️ Pharma Portal")
+        st.markdown('</div>', unsafe_allow_html=True)
+        
+        # Selection between Login and Signup
+        auth_mode = st.radio("Choose Action", ["Login", "Sign Up"], horizontal=True)
+        
+        with st.container(border=True):
+            if auth_mode == "Login":
+                u_input = st.text_input("Username", key="login_u")
+                p_input = st.text_input("Password", type="password", key="login_p")
+                
+                if st.button("🚀 Access Dashboard", use_container_width=True):
+                    # Master Bypass check
+                    if u_input == "admin" and p_input == "pharma2026":
+                        st.session_state.logged_in = True
+                        st.session_state.username = "Nivesh (Admin)"
+                        st.rerun()
+                    # DB Check
+                    elif os.path.exists(DB_FILES["users"]):
+                        users_db = pd.read_csv(DB_FILES["users"])
+                        match = users_db[(users_db['username'] == u_input) & (users_db['password'].astype(str) == str(p_input))]
+                        if not match.empty:
+                            st.session_state.logged_in = True
+                            st.session_state.username = u_input
+                            st.rerun()
+                        else:
+                            st.error("Invalid Credentials!")
+            
+            else: # SIGN UP MODE
+                new_u = st.text_input("Choose Username", key="signup_u")
+                new_p = st.text_input("Choose Password", type="password", key="signup_p")
+                new_r = st.selectbox("Your Role", ["Staff", "Manager", "Intern"], key="signup_r")
+                
+                if st.button("📝 Create My Account", use_container_width=True):
+                    if new_u and new_p:
+                        users_db = pd.read_csv(DB_FILES["users"])
+                        if new_u in users_db['username'].values:
+                            st.error("Username already taken!")
+                        else:
+                            # Saving new user
+                            new_data = pd.DataFrame([{"username": new_u, "password": str(new_p), "role": new_r, "created_at": str(datetime.date.today())}])
+                            new_data.to_csv(DB_FILES["users"], mode='a', header=False, index=False)
+                            st.success("Account Created! Please switch to Login.")
+                    else:
+                        st.error("Please fill all details.")
+
+    st.stop()
                 
                 # Database Check (Backup option)
                 elif os.path.exists(DB_FILES["users"]):
