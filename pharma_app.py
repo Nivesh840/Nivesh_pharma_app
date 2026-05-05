@@ -5,6 +5,7 @@ import os
 import plotly.express as px
 import plotly.graph_objects as go
 from google import genai
+from fpdf import FPDF
 import time
 
 # 1. SETTINGS & THEME
@@ -264,13 +265,6 @@ def generate_pdf_bill(customer_name, cart_items, total_amount):
     except Exception as e:
         st.error(f"GST PDF Error: {e}")
         return None
-                        
-                        # Cart Khali Karo
-                        st.session_state.cart = []
-                        st.balloons()
-                        
-                        # Tip for User
-                        st.info("💡 Tip: Browser mein 'Ctrl + P' dabayein agar aapko is table ka print out chahiye.")
 
 # ==========================================
 # 5. MODULE: INVENTORY PRO (STOCK MANAGEMENT)
