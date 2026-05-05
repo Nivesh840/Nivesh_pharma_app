@@ -199,7 +199,7 @@ with t1:
                         # 5. Success Message & Receipt Preview
                         st.success(f"Invoice {invoice_id} Saved!")
                         
-                        def generate_pdf_bill(customer_name, cart_items, total_amount):
+def generate_pdf_bill(customer_name, cart_items, total_amount):
     try:
         pdf = FPDF()
         pdf.add_page()
