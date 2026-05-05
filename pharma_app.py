@@ -7,63 +7,53 @@ import plotly.graph_objects as go
 from google import genai
 import time
 
-# 1. SETTINGS & THEME
-st.set_page_config(page_title="Nivesh Pharma Ultra v3.0", layout="wide", page_icon="💊")
+# ==========================================
+# 3. MASTER AUTHENTICATION SYSTEM (BYPASS-PROOF)
+# ==========================================
 
-st.markdown("""
-    <style>
-    .main { background: #0e1117; color: #e6edf3; }
-    .stButton>button { width: 100%; border-radius: 8px; background-color: #238636; color: white; height: 3em; }
-    div[data-testid="stMetric"] { background: #1c2128; border: 1px solid #30363d; padding: 15px; border-radius: 10px; }
-    </style>
-    """, unsafe_allow_html=True)
-
-# 2. DATA ENGINE
-DB_FILES = {"inv": "inventory.csv", "sales": "sales_history.csv", "users": "users.csv"}
-
-def load_enterprise_data():
-    # Files initialize karna agar nahi hain
-    if not os.path.exists(DB_FILES["inv"]):
-        pd.DataFrame(columns=["Medicine", "Stock", "Expiry Date", "Unit Price (₹)", "Cost Price (₹)", "Category"]).to_csv(DB_FILES["inv"], index=False)
-    if not os.path.exists(DB_FILES["sales"]):
-        pd.DataFrame(columns=["Date", "Item", "Qty", "Total", "Profit", "User"]).to_csv(DB_FILES["sales"], index=False)
-    if not os.path.exists(DB_FILES["users"]):
-        pd.DataFrame([{"username": "admin", "password": "pharma2026"}]).to_csv(DB_FILES["users"], index=False)
-
-    inv = pd.read_csv(DB_FILES["inv"])
-    sales = pd.read_csv(DB_FILES["sales"])
-    
-    # Force Numeric (Errors fix karne ke liye)
-    for col in ["Unit Price (₹)", "Cost Price (₹)", "Stock"]:
-        if col in inv.columns: inv[col] = pd.to_numeric(inv[col], errors='coerce').fillna(0)
-    for col in ["Total", "Profit", "Qty"]:
-        if col in sales.columns: sales[col] = pd.to_numeric(sales[col], errors='coerce').fillna(0)
-    
-    return inv, sales
-
-# Data Load Karo
-inv, sales = load_enterprise_data()
-
-# 3. AUTHENTICATION SYSTEM
+# Session State Initialize
 if 'logged_in' not in st.session_state:
     st.session_state.logged_in = False
+    st.session_state.username = ""
 
+# --- LOGIN SCREEN ---
 if not st.session_state.logged_in:
     _, mid, _ = st.columns([1, 1.2, 1])
     with mid:
+        st.markdown('<div style="text-align: center;">', unsafe_allow_html=True)
+        st.image("https://cdn-icons-png.flaticon.com/512/3209/3209101.png", width=80)
         st.title("🛡️ Pharma Portal Login")
-        u = st.text_input("Username (Default: admin)")
-        p = st.text_input("Password (Default: pharma2026)", type="password")
-        if st.button("Login"):
-            users_db = pd.read_csv(DB_FILES["users"])
-            if u in users_db['username'].values and str(p) == str(users_db[users_db['username'] == u]['password'].values[0]):
-                st.session_state.logged_in = True
-                st.session_state.username = u
-                st.success("Login Successful!")
-                st.rerun()
-            else:
-                st.error("Invalid Credentials")
-    st.stop() # Dashboard tabhi dikhega jab login hoga
+        st.markdown('</div>', unsafe_allow_html=True)
+        
+        with st.container(border=True):
+            u_input = st.text_input("Username", key="login_user")
+            p_input = st.text_input("Password", type="password", key="login_pass")
+            
+            if st.button("🚀 Access Dashboard", use_container_width=True):
+                # MASTER BYPASS: Ye hamesha chalega chahe CSV ho ya na ho
+                if u_input == "admin" and p_input == "pharma2026":
+                    st.session_state.logged_in = True
+                    st.session_state.username = "Nivesh (Admin)"
+                    st.success("Master Access Granted! Loading...")
+                    time.sleep(1)
+                    st.rerun()
+                
+                # Database Check (Backup option)
+                elif os.path.exists(DB_FILES["users"]):
+                    users_db = pd.read_csv(DB_FILES["users"])
+                    # String conversion to avoid type errors
+                    match = users_db[(users_db['username'] == u_input) & (users_db['password'].astype(str) == str(p_input))]
+                    if not match.empty:
+                        st.session_state.logged_in = True
+                        st.session_state.username = u_input
+                        st.rerun()
+                    else:
+                        st.error("Invalid Credentials! Try admin / pharma2026")
+                else:
+                    st.error("Database not found! Use Master Login: admin / pharma2026")
+        
+        st.info("System Hint: Use 'admin' as ID and 'pharma2026' as Key.")
+    st.stop() # Dashboard tabhi dikhega jab login success hoga
 
 # --- DASHBOARD STARTS HERE ---
 st.title(f"🚀 Nivesh Pharma Ultra (User: {st.session_state.username})")
