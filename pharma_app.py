@@ -56,7 +56,7 @@ def load_enterprise_data():
     return inv, sales
 
 # --- GLOBAL DATA LOAD (Error Fix: Ise yahan hona zaroori hai) ---
-inv, sales = load_enterprise_data()[cite: 2]
+inv, sales = load_enterprise_data()
 
 # ==========================================
 # 3. MASTER AUTH & SIGNUP SYSTEM (REPAIRED)
