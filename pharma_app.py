@@ -72,10 +72,10 @@ if st.button("🚀 Access Dashboard", use_container_width=True):
 # 3. MASTER AUTH & SIGNUP SYSTEM
 # ==========================================
 
-if 'logged_in' not in st.session_state:
+    if 'logged_in' not in st.session_state:
     st.session_state.logged_in = False
 
-if not st.session_state.logged_in:
+    if not st.session_state.logged_in:
     _, mid, _ = st.columns([1, 1.2, 1])
     with mid:
         st.markdown('<div style="text-align: center;">', unsafe_allow_html=True)
