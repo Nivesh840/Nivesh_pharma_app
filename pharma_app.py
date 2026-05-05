@@ -58,11 +58,26 @@ def load_enterprise_data():
     return inv, sales
 
 # ==========================================
-# 3. MASTER AUTH & SIGNUP SYSTEM
+# 3. MASTER AUTH & SIGNUP SYSTEM (REPAIRED)
 # ==========================================
 if 'logged_in' not in st.session_state:
     st.session_state.logged_in = False
     st.session_state.username = ""
+
+# --- SAFETY CHECK: Users file ko read karne se pehle verify karein ---
+def get_safe_users_db():
+    try:
+        if not os.path.exists(DB_FILES["users"]):
+            pd.DataFrame([{"username": "admin", "password": "pharma2026", "role": "Owner"}]).to_csv(DB_FILES["users"], index=False)
+        
+        db = pd.read_csv(DB_FILES["users"])
+        if db.empty or "username" not in db.columns:
+            raise ValueError("Corrupt")
+        return db
+    except:
+        # Agar file kharab hai toh turant reset karein
+        pd.DataFrame([{"username": "admin", "password": "pharma2026", "role": "Owner"}]).to_csv(DB_FILES["users"], index=False)
+        return pd.read_csv(DB_FILES["users"])
 
 if not st.session_state.logged_in:
     _, mid, _ = st.columns([1, 1.2, 1])
@@ -84,8 +99,9 @@ if not st.session_state.logged_in:
                         st.session_state.logged_in = True
                         st.session_state.username = "Nivesh (Admin)"
                         st.rerun()
-                    elif os.path.exists(DB_FILES["users"]):
-                        users_db = pd.read_csv(DB_FILES["users"])
+                    else:
+                        # SAFE LOADING - Yahan error nahi aayega ab
+                        users_db = get_safe_users_db()
                         match = users_db[(users_db['username'] == u_input) & (users_db['password'].astype(str) == str(p_input))]
                         if not match.empty:
                             st.session_state.logged_in = True
@@ -93,14 +109,15 @@ if not st.session_state.logged_in:
                             st.rerun()
                         else:
                             st.error("Invalid Credentials!")
-            else:
+            
+            else: # SIGN UP MODE
                 new_u = st.text_input("Choose Username", key="signup_u")
                 new_p = st.text_input("Choose Password", type="password", key="signup_p")
                 new_r = st.selectbox("Your Role", ["Staff", "Manager", "Intern"], key="signup_r")
                 
                 if st.button("📝 Create My Account", use_container_width=True):
                     if new_u and new_p:
-                        users_db = pd.read_csv(DB_FILES["users"])
+                        users_db = get_safe_users_db()
                         if new_u in users_db['username'].values:
                             st.error("Username already taken!")
                         else:
