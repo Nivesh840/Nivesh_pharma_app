@@ -49,6 +49,51 @@ if not st.session_state.logged_in:
 # Ye line ab line 60 ke error ko fix karegi kyunki 'inv' hamesha login ke baad load hoga
 inv, sales = load_data()
 
+# --- 1. SETTINGS ---
+st.set_page_config(page_title="Nivesh Pharma Ultra", layout="wide", page_icon="💊")
+
+# --- 2. DATABASE LOADING (FORCE NUMBERS) ---
+def load_data():
+    if not os.path.exists("inventory.csv"):
+        pd.DataFrame(columns=["Medicine", "Stock", "Expiry Date", "Unit Price (₹)", "Cost Price (₹)", "Category"]).to_csv("inventory.csv", index=False)
+    if not os.path.exists("sales_history.csv"):
+        pd.DataFrame(columns=["Date", "Item", "Qty", "Total", "Profit", "User"]).to_csv("sales_history.csv", index=False)
+    if not os.path.exists("users.csv"):
+        pd.DataFrame([{"username": "nivesh", "password": "pharma2026"}]).to_csv("users.csv", index=False)
+
+    inv = pd.read_csv("inventory.csv")
+    sales = pd.read_csv("sales_history.csv")
+    
+    # Force Numbers (Safe conversion)
+    for col in ["Unit Price (₹)", "Cost Price (₹)", "Stock"]:
+        inv[col] = pd.to_numeric(inv[col], errors='coerce').fillna(0)
+    for col in ["Total", "Profit", "Qty"]:
+        sales[col] = pd.to_numeric(sales[col], errors='coerce').fillna(0)
+    
+    return inv, sales
+
+inv, sales = load_data()
+
+# --- 3. LOGIN LOGIC (Shortened for brevity) ---
+if 'logged_in' not in st.session_state: st.session_state.logged_in = False
+if not st.session_state.logged_in:
+    st.title("🛡️ Pharma Portal")
+    u = st.text_input("Username")
+    p = st.text_input("Password", type="password")
+    if st.button("Access Dashboard"):
+        users = pd.read_csv("users.csv")
+        if u in users['username'].values and str(p) == str(users[users['username'] == u]['password'].values[0]):
+            st.session_state.logged_in = True
+            st.session_state.username = u
+            st.rerun()
+        else: st.error("Invalid Credentials")
+    st.stop()
+
+# --- 4. DASHBOARD ---
+st.title(f"🚀 Nivesh Pharma Dashboard (User: {st.session_state.username})")
+
+t1, t2, t3, t4 = st.tabs(["🛒 Super POS", "📦 Inventory Pro", "🌿 AI Herbal Lab", "📈 Analytics"])
+
 with t1:
     col_a, col_b = st.columns([1, 1.2])
     with col_a:
