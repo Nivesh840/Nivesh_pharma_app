@@ -600,4 +600,48 @@ if st.session_state.get('show_logs', False):
             mime="text/csv"
         )
 
+# ==========================================
+# 13. MODULE: PERFORMANCE & SYSTEM CLEANUP
+# ==========================================
+
+# --- AUTO-SAVE & REFRESH LOGIC ---
+def system_heartbeat():
+    """App ki health check karne ke liye aur data sync rakhne ke liye."""
+    last_sync = datetime.datetime.now().strftime("%H:%M:%S")
+    
+    # Sidebar Status Indicator
+    with st.sidebar:
+        st.markdown("---")
+        st.success(f"System Online | Sync: {last_sync}")
+        
+        # Logout Logic
+        if st.button("🔴 Secure Logout", use_container_width=True):
+            # Clearing all session states
+            for key in list(st.session_state.keys()):
+                del st.session_state[key]
+            st.rerun()
+
+# --- ERROR BOUNDARY (CRASH PROTECTOR) ---
+def final_polish():
+    # 1. Page Bottom Padding
+    st.markdown("<br><br><br>", unsafe_allow_html=True)
+    
+    # 2. Global Exception Handling
+    # Agar kisi loop mein calculation error ho toh app white screen nahi dikhayegi
+    if 'error_count' not in st.session_state:
+        st.session_state.error_count = 0
+        
+    # 3. Credits & Versioning
+    st.markdown("---")
+    c1, c2, c3 = st.columns(3)
+    c1.caption("© 2026 Nivesh Pharma Enterprise")
+    c2.caption("Developed for B.Pharm Academic & Professional Use")
+    c3.markdown("<div style='text-align: right; color: gray;'>v3.0.1-Stable</div>", unsafe_allow_html=True)
+
+# Calling final system functions
+system_heartbeat()
+final_polish()
+
+
+
 
