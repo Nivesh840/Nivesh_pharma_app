@@ -338,3 +338,86 @@ with t3:
                 except Exception as e:
                     st.error(f"⚠️ AI Analysis Failed: {e}")
                     st.info("Check karein ki aapka internet aur API key valid hai.")
+
+# ==========================================
+# 7. MODULE: ANALYTICS & BUSINESS INTELLIGENCE
+# ==========================================
+with t4:
+    st.markdown("### 📈 Strategic Business Analytics")
+    
+    if sales.empty:
+        st.warning("⚠️ Analytics dekhne ke liye pehle kuch sales (Billing) karein.")
+    else:
+        # --- TOP LEVEL KPI CARDS ---
+        kpi1, kpi2, kpi3, kpi4 = st.columns(4)
+        
+        total_revenue = sales["Total"].sum()
+        total_profit = sales["Profit"].sum()
+        total_items_sold = sales["Qty"].sum()
+        avg_invoice = total_revenue / sales["Invoice_ID"].nunique() if "Invoice_ID" in sales.columns else 0
+
+        kpi1.metric("Total Revenue", f"₹{total_revenue:,.2f}", delta="Cash In")
+        kpi2.metric("Net Profit", f"₹{total_profit:,.2f}", delta=f"{((total_profit/total_revenue)*100 if total_revenue > 0 else 0):.1f}% Margin")
+        kpi3.metric("Items Sold", int(total_items_sold))
+        kpi4.metric("Avg Bill Value", f"₹{avg_invoice:,.2f}")
+
+        st.markdown("---")
+
+        # --- VISUAL CHARTS ROW ---
+        chart_col1, chart_col2 = st.columns(2)
+
+        with chart_col1:
+            st.subheader("💰 Profit Trend Analysis")
+            # Grouping by Date for Line Chart
+            sales['Date_Only'] = pd.to_datetime(sales['Date']).dt.date
+            daily_profit = sales.groupby('Date_Only')['Profit'].sum().reset_index()
+            
+            fig_profit = px.line(
+                daily_profit, 
+                x='Date_Only', 
+                y='Profit',
+                markers=True,
+                line_shape="spline",
+                color_discrete_sequence=["#4CAF50"]
+            )
+            fig_profit.update_layout(plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)")
+            st.plotly_chart(fig_profit, use_container_width=True)
+
+        with chart_col2:
+            st.subheader("📦 Top Selling Medicines")
+            top_items = sales.groupby('Item')['Qty'].sum().sort_values(ascending=False).head(5).reset_index()
+            
+            fig_top = px.bar(
+                top_items, 
+                x='Item', 
+                y='Qty',
+                color='Qty',
+                color_continuous_scale='Greens'
+            )
+            fig_top.update_layout(plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)")
+            st.plotly_chart(fig_top, use_container_width=True)
+
+        # --- DATA INSIGHTS TABLE ---
+        st.markdown("### 📜 Recent Transaction Ledger")
+        # Showing latest transactions first
+        st.dataframe(
+            sales.sort_values(by="Date", ascending=False).head(20),
+            use_container_width=True,
+            hide_index=True
+        )
+
+        # CSV Download Button for Accounting
+        st.download_button(
+            label="📥 Download Full Sales Report (CSV)",
+            data=sales.to_csv(index=False).encode('utf-8'),
+            file_name=f"Pharma_Sales_{datetime.date.today()}.csv",
+            mime='text/csv',
+        )
+
+# ==========================================
+# 8. FOOTER & SYSTEM STATUS
+# ==========================================
+st.markdown("---")
+f_left, f_right = st.columns(2)
+f_left.caption(f"Nivesh Pharma Ultra v3.0 | Database Status: Connected ✅")
+f_right.markdown(f"<div style='text-align: right; color: gray;'>Last Sync: {datetime.datetime.now().strftime('%H:%M:%S')}</div>", unsafe_allow_html=True)
