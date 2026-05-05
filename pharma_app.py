@@ -67,7 +67,7 @@ if not st.session_state.logged_in:
             u_input = st.text_input("Username", key="login_user")
             p_input = st.text_input("Password", type="password", key="login_pass")
             
-            if st.button("🚀 Access Dashboard", use_container_width=True):
+if st.button("🚀 Access Dashboard", use_container_width=True):
                 # ==========================================
 # 3. MASTER AUTH & SIGNUP SYSTEM
 # ==========================================
