@@ -133,27 +133,29 @@ with t1:
             total_amt = cart_df["Total"].sum()
             st.header(f"Total: ₹{total_amt}")
             
-           # --- TAB 1: SUPER POS (Updated for Visibility) ---
+        # --- TAB 1: SUPER POS (No Duplicate ID Version) ---
 with t1:
     col_a, col_b = st.columns([1, 1.2])
     
     with col_a:
         st.subheader("Quick Billing")
         if not inv.empty:
-            med = st.selectbox("Select Med", inv["Medicine"].unique())
+            # UNIQUE KEY: 'pos_med_select'
+            med = st.selectbox("Select Med", inv["Medicine"].unique(), key="pos_med_select")
             med_data = inv[inv["Medicine"] == med].iloc[0]
             
-            # Stock check display
+            # Stock display
             current_stock = int(med_data["Stock"])
-            st.caption(f"Available Stock: {current_stock}")
+            st.info(f"📦 Stock available: {current_stock}")
             
-            qty = st.number_input("Quantity", 1, max(1, current_stock), step=1)
+            # UNIQUE KEY: 'pos_qty_input'
+            qty = st.number_input("Quantity", 1, max(1, current_stock), step=1, key="pos_qty_input")
             
-            if st.button("➕ Add to Cart"):
+            # UNIQUE KEY: 'pos_add_btn'
+            if st.button("➕ Add to Cart", key="pos_add_btn"):
                 if 'cart' not in st.session_state: 
                     st.session_state.cart = []
                 
-                # Naya item cart mein add karna
                 st.session_state.cart.append({
                     "Item": med, 
                     "Qty": int(qty), 
@@ -161,25 +163,40 @@ with t1:
                     "Cost": float(med_data["Cost Price (₹)"]), 
                     "Total": float(qty * med_data["Unit Price (₹)"])
                 })
-                st.toast(f"{med} added!")
-                st.rerun() # Yeh zaroori hai screen refresh karne ke liye
+                st.rerun()
         else:
-            st.warning("Pehle 'Inventory Pro' mein jaakar stock add karein.")
+            st.warning("Inventory khali hai!")
         
     with col_b:
         st.subheader("Invoice Summary")
         if 'cart' in st.session_state and len(st.session_state.cart) > 0:
-            # Cart ko table format mein dikhana
             cart_df = pd.DataFrame(st.session_state.cart)
-            st.table(cart_df[["Item", "Qty", "Price", "Total"]]) # st.table zyada stable hai
+            st.table(cart_df[["Item", "Qty", "Price", "Total"]])
             
             total_amt = cart_df["Total"].sum()
-            st.markdown(f"### **Total Amount: ₹{total_amt}**")
+            st.success(f"### Total Amount: ₹{total_amt}")
             
-            # Yahan apka "Finalize & Print Bill" wala button aayega (pichle safe logic ke saath)
+            # UNIQUE KEY: 'pos_finalize_btn'
+            if st.button("🚀 Finalize & Print Bill", key="pos_finalize_btn"):
+                for item in st.session_state.cart:
+                    inv.loc[inv["Medicine"] == item["Item"], "Stock"] -= int(item["Qty"])
+                    
+                    new_sale = {
+                        "Date": datetime.datetime.now().strftime("%Y-%m-%d %H:%M"),
+                        "Item": item["Item"], "Qty": item["Qty"], "Total": item["Total"],
+                        "Profit": item["Total"] - (item["Qty"] * item["Cost"]), 
+                        "User": st.session_state.username
+                    }
+                    sales = pd.concat([sales, pd.DataFrame([new_sale])], ignore_index=True)
+                
+                inv.to_csv("inventory.csv", index=False)
+                sales.to_csv("sales_history.csv", index=False)
+                st.session_state.cart = []
+                st.balloons()
+                st.success("Sale Recorded!")
+                st.rerun()
         else:
-            st.info("Cart khali hai. Medicine select karke 'Add to Cart' dabayein.")
-            
+            st.write("Cart is empty.")
     
 # --- TAB 2: INVENTORY PRO ---
 with t2:
