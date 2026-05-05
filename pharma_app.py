@@ -528,4 +528,76 @@ with t1:
         with col_pdf2:
             st.info("Download PDF before clicking Finalize.")
 
+# ==========================================
+# 12. MODULE: SYSTEM AUDIT & DATA BACKUP
+# ==========================================
+
+# Sidebar Toggle for Logs
+with st.sidebar:
+    st.markdown("---")
+    if st.button("📁 View System Activity"):
+        st.session_state.show_logs = not st.session_state.get('show_logs', False)
+
+if st.session_state.get('show_logs', False):
+    st.markdown("---")
+    st.subheader("🕵️ Enterprise Audit Logs")
+    
+    # Logic to read or create logs
+    if not os.path.exists("system_logs.csv"):
+        pd.DataFrame(columns=["Timestamp", "User", "Action", "Status"]).to_csv("system_logs.csv", index=False)
+    
+    logs_df = pd.read_csv("system_logs.csv")
+    
+    # Log Controls
+    l_col1, l_col2 = st.columns([3, 1])
+    with l_col1:
+        search_log = st.text_input("Filter Logs by Action/User", placeholder="e.g. Login, Sale, admin...")
+    with l_col2:
+        if st.button("Clear History"):
+            pd.DataFrame(columns=["Timestamp", "User", "Action", "Status"]).to_csv("system_logs.csv", index=False)
+            st.rerun()
+
+    # Filtering Logic
+    if search_log:
+        logs_df = logs_df[logs_df.apply(lambda row: row.astype(str).str.contains(search_log, case=False).any(), axis=1)]
+
+    # Displaying Logs with Professional Styling
+    st.dataframe(
+        logs_df.sort_values(by="Timestamp", ascending=False).head(100),
+        use_container_width=True,
+        hide_index=True
+    )
+
+    # --- AUTOMATIC DATA BACKUP ENGINE ---
+    st.markdown("---")
+    st.subheader("💾 Emergency Data Recovery")
+    st.write("Download all system files as a backup in case of server failure.")
+    
+    b_col1, b_col2, b_col3 = st.columns(3)
+    
+    # Inventory Backup
+    b_col1.download_button(
+        "📥 Backup Inventory",
+        data=inv.to_csv(index=False).encode('utf-8'),
+        file_name=f"Backup_Inv_{datetime.date.today()}.csv",
+        mime="text/csv"
+    )
+    
+    # Sales Backup
+    b_col2.download_button(
+        "📥 Backup Sales History",
+        data=sales.to_csv(index=False).encode('utf-8'),
+        file_name=f"Backup_Sales_{datetime.date.today()}.csv",
+        mime="text/csv"
+    )
+    
+    # User Database Backup
+    if st.session_state.username == "Nivesh (Admin)":
+        b_col3.download_button(
+            "📥 Backup Users DB",
+            data=pd.read_csv(DB_FILES["users"]).to_csv(index=False).encode('utf-8'),
+            file_name=f"Backup_Users_{datetime.date.today()}.csv",
+            mime="text/csv"
+        )
+
 
