@@ -423,62 +423,80 @@ f_left.caption(f"Nivesh Pharma Ultra v3.0 | Database Status: Connected ✅")
 f_right.markdown(f"<div style='text-align: right; color: gray;'>Last Sync: {datetime.datetime.now().strftime('%H:%M:%S')}</div>", unsafe_allow_html=True)
 
 # ==========================================
-# 9. MODULE: PDF INVOICE GENERATOR (FIXED)
+# 9. MODULE: PDF INVOICE GENERATOR (ULTRA STABLE)
 # ==========================================
 def generate_pdf_bill(customer_name, cart_items, total_amount):
     try:
-        # Initializing FPDF with standard settings
-        pdf = FPDF(orientation='P', unit='mm', format='A4')
+        pdf = FPDF()
         pdf.add_page()
         
-        # Header: Pharmacy Branding
+        # Branding
         pdf.set_font("Arial", 'B', 20)
         pdf.set_text_color(35, 134, 54) 
         pdf.cell(190, 15, "NIVESH PHARMA ULTRA v3.0", ln=True, align='C')
         
         pdf.set_font("Arial", '', 10)
         pdf.set_text_color(0, 0, 0)
-        pdf.cell(190, 5, "Authorized Pharmaceutical Retailer & Healthcare Provider", ln=True, align='C')
         pdf.cell(190, 5, f"Date: {datetime.datetime.now().strftime('%Y-%m-%d %H:%M')}", ln=True, align='C')
         pdf.ln(10)
         
         # Customer Info
         pdf.set_font("Arial", 'B', 12)
-        pdf.cell(190, 10, f"Customer: {customer_name}", ln=True)
-        pdf.line(10, 50, 200, 50)
+        pdf.cell(190, 10, f"Customer: {str(customer_name)}", ln=True)
+        pdf.line(10, pdf.get_y(), 200, pdf.get_y())
         pdf.ln(5)
         
         # Table Header
-        pdf.set_fill_color(240, 240, 240)
+        pdf.set_fill_color(230, 230, 230)
         pdf.set_font("Arial", 'B', 10)
-        pdf.cell(80, 10, " Medicine Name", 1, 0, 'L', True)
-        pdf.cell(30, 10, "Qty", 1, 0, 'C', True)
+        pdf.cell(85, 10, " Medicine Name", 1, 0, 'L', True)
+        pdf.cell(25, 10, "Qty", 1, 0, 'C', True)
         pdf.cell(40, 10, "Price (Rs)", 1, 0, 'C', True)
         pdf.cell(40, 10, "Total (Rs)", 1, 1, 'C', True)
         
         # Table Body
         pdf.set_font("Arial", '', 10)
         for item in cart_items:
-            pdf.cell(80, 10, f" {str(item['Item'])}", 1)
-            pdf.cell(30, 10, str(item['Qty']), 1, 0, 'C')
+            # Safely converting to string to avoid encoding issues
+            name = str(item['Item']).encode('ascii', 'ignore').decode('ascii')
+            pdf.cell(85, 10, f" {name}", 1)
+            pdf.cell(25, 10, str(item['Qty']), 1, 0, 'C')
             pdf.cell(40, 10, f"{float(item['Price']):.2f}", 1, 0, 'C')
             pdf.cell(40, 10, f"{float(item['Total']):.2f}", 1, 1, 'C')
         
-        # Final Total
+        # Grand Total
         pdf.ln(5)
         pdf.set_font("Arial", 'B', 14)
         pdf.set_text_color(200, 0, 0)
         pdf.cell(150, 10, "GRAND TOTAL:", 0, 0, 'R')
         pdf.cell(40, 10, f"Rs. {float(total_amount):.2f}", 1, 1, 'C')
         
-        # Footer
-        pdf.ln(20)
-        pdf.set_font("Arial", 'I', 8)
-        pdf.set_text_color(100, 100, 100)
-        pdf.cell(190, 5, "Thank you for choosing Nivesh Pharma. Get well soon!", ln=True, align='C')
-        
-        # Encoding check for Streamlit
         return pdf.output(dest='S').encode('latin-1', errors='ignore')
     except Exception as e:
-        st.error(f"PDF Generation Error: {e}")
+        st.error(f"Logic Error: {e}")
         return None
+
+# --- INTEGRATION IN TAB 1 (Paste this exactly here) ---
+with t1:
+    if 'cart' in st.session_state and st.session_state.cart:
+        st.markdown("---")
+        c_name = st.text_input("Billing Name", "Walking Customer", key="final_cust_name")
+        
+        # Pre-generating PDF bytes
+        bill_total = sum(item['Total'] for item in st.session_state.cart)
+        pdf_data = generate_pdf_bill(c_name, st.session_state.cart, bill_total)
+        
+        col_pdf1, col_pdf2 = st.columns(2)
+        
+        with col_pdf1:
+            if pdf_data:
+                st.download_button(
+                    label="📥 Download PDF Bill",
+                    data=pdf_data,
+                    file_name=f"Bill_{int(time.time())}.pdf",
+                    mime="application/pdf",
+                    key="download_invoice_btn"
+                )
+        
+        with col_pdf2:
+            st.info("Download PDF before clicking Finalize.")
