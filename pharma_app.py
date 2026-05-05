@@ -3,155 +3,140 @@ import pandas as pd
 import datetime
 import os
 import plotly.express as px
+import plotly.graph_objects as go
 from google import genai
 from fpdf import FPDF
+import time
 
-# --- 1. DATA LOADING FUNCTION ---
-def load_data():
-    # Files check aur initialization
-    if not os.path.exists("inventory.csv"):
-        pd.DataFrame(columns=["Medicine", "Stock", "Expiry Date", "Unit Price (₹)", "Cost Price (₹)", "Category"]).to_csv("inventory.csv", index=False)
-    if not os.path.exists("sales_history.csv"):
-        pd.DataFrame(columns=["Date", "Item", "Qty", "Total", "Profit", "User"]).to_csv("sales_history.csv", index=False)
-    
-    inv = pd.read_csv("inventory.csv")
-    sales = pd.read_csv("sales_history.csv")
-    
-    # Safe Numeric Conversion
-    for col in ["Unit Price (₹)", "Cost Price (₹)", "Stock"]:
-        if col in inv.columns:
-            inv[col] = pd.to_numeric(inv[col], errors='coerce').fillna(0)
-    for col in ["Total", "Profit", "Qty"]:
-        if col in sales.columns:
-            sales[col] = pd.to_numeric(sales[col], errors='coerce').fillna(0)
-    
-    return inv, sales
+# ==========================================
+# 1. ENTERPRISE CONFIGURATION & THEME
+# ==========================================
+st.set_page_config(
+    page_title="Nivesh Pharma Ultra v3.0", 
+    layout="wide", 
+    page_icon="💊",
+    initial_sidebar_state="expanded"
+)
 
-# --- 2. LOGIN CHECK ---
+# Custom UI Injection for Premium Feel
+st.markdown("""
+    <style>
+    /* Main Background & Glassmorphism */
+    .main { background: linear-gradient(135deg, #0e1117 0%, #161b22 100%); color: #e6edf3; }
+    
+    /* Advanced Sidebar */
+    section[data-testid="stSidebar"] { background-color: #0d1117 !important; border-right: 1px solid #30363d; }
+    
+    /* Enterprise Metrics Card */
+    div[data-testid="stMetricValue"] { font-size: 28px; font-weight: 700; color: #4CAF50 !important; }
+    div[data-testid="stMetric"] { 
+        background: rgba(23, 28, 36, 0.8); 
+        border: 1px solid #30363d; 
+        padding: 20px; 
+        border-radius: 12px;
+        transition: 0.3s ease;
+    }
+    div[data-testid="stMetric"]:hover { border-color: #4CAF50; transform: translateY(-3px); }
+    
+    /* Professional Buttons */
+    .stButton>button { 
+        width: 100%; border-radius: 8px; font-weight: 600; 
+        height: 3.2em; transition: all 0.2s ease;
+        background-color: #238636; border: none; color: white;
+    }
+    .stButton>button:hover { background-color: #2ea043; border: none; box-shadow: 0px 4px 15px rgba(46, 160, 67, 0.4); }
+    
+    /* Success/Error Styling */
+    .stAlert { border-radius: 10px; border: none; }
+    </style>
+    """, unsafe_allow_html=True)
+
+# ==========================================
+# 2. DATA ENGINE (ZERO-ERROR ARCHITECTURE)
+# ==========================================
+DB_FILES = {
+    "inv": "inventory.csv",
+    "sales": "sales_history.csv",
+    "users": "users.csv",
+    "logs": "system_logs.csv"
+}
+
+def secure_init():
+    """Initializes system files with correct headers if they don't exist."""
+    headers = {
+        "inv": ["Medicine", "Stock", "Expiry Date", "Unit Price (₹)", "Cost Price (₹)", "Category", "Last Updated"],
+        "sales": ["Date", "Invoice_ID", "Item", "Qty", "Total", "Profit", "User"],
+        "users": ["username", "password", "role", "created_at"],
+        "logs": ["Timestamp", "User", "Action", "Status"]
+    }
+    
+    for key, filename in DB_FILES.items():
+        if not os.path.exists(filename) or os.stat(filename).st_size == 0:
+            df = pd.DataFrame(columns=headers[key])
+            if key == "users":
+                # Default Admin Account
+                df = pd.DataFrame([{"username": "admin", "password": "pharma2026", "role": "Owner", "created_at": str(datetime.date.today())}])
+            df.to_csv(filename, index=False)
+
+def load_enterprise_data():
+    """Loads and sanitizes all data to prevent UFuncNoLoopError."""
+    secure_init()
+    
+    try:
+        # Load Inventory
+        inv = pd.read_csv(DB_FILES["inv"])
+        num_cols_inv = ["Unit Price (₹)", "Cost Price (₹)", "Stock"]
+        for col in num_cols_inv:
+            inv[col] = pd.to_numeric(inv[col], errors='coerce').fillna(0.0)
+        
+        # Load Sales
+        sales = pd.read_csv(DB_FILES["sales"])
+        num_cols_sales = ["Qty", "Total", "Profit"]
+        for col in num_cols_sales:
+            sales[col] = pd.to_numeric(sales[col], errors='coerce').fillna(0.0)
+            
+        return inv, sales
+    except Exception as e:
+        st.error(f"Critical System Error: {e}")
+        return pd.DataFrame(), pd.DataFrame()
+
+# Initialize Global Data
+inv, sales = load_enterprise_data()
+
+# ==========================================
+# 3. AUTHENTICATION MODULE (BYPASS PROOF)
+# ==========================================
 if 'logged_in' not in st.session_state:
     st.session_state.logged_in = False
+    st.session_state.user_role = None
 
-if not st.session_state.logged_in:
-    st.title("🛡️ Pharma Portal")
-    u = st.text_input("Username")
-    p = st.text_input("Password", type="password")
-    if st.button("Access Dashboard"):
-        users = pd.read_csv("users.csv")
-        if u in users['username'].values and str(p) == str(users[users['username'] == u]['password'].values[0]):
-            st.session_state.logged_in = True
-            st.session_state.username = u
-            st.rerun()
-        else:
-            st.error("Invalid Credentials")
-    st.stop()
-
-# --- 3. LOAD DATA (ONLY AFTER LOGIN) ---
-# Ye line ab line 60 ke error ko fix karegi kyunki 'inv' hamesha login ke baad load hoga
-inv, sales = load_data()
-
-# --- 1. SETTINGS ---
-st.set_page_config(page_title="Nivesh Pharma Ultra", layout="wide", page_icon="💊")
-
-# --- 2. DATABASE LOADING (FORCE NUMBERS) ---
-def load_data():
-    if not os.path.exists("inventory.csv"):
-        pd.DataFrame(columns=["Medicine", "Stock", "Expiry Date", "Unit Price (₹)", "Cost Price (₹)", "Category"]).to_csv("inventory.csv", index=False)
-    if not os.path.exists("sales_history.csv"):
-        pd.DataFrame(columns=["Date", "Item", "Qty", "Total", "Profit", "User"]).to_csv("sales_history.csv", index=False)
-    if not os.path.exists("users.csv"):
-        pd.DataFrame([{"username": "nivesh", "password": "pharma2026"}]).to_csv("users.csv", index=False)
-
-    inv = pd.read_csv("inventory.csv")
-    sales = pd.read_csv("sales_history.csv")
-    
-    # Force Numbers (Safe conversion)
-    for col in ["Unit Price (₹)", "Cost Price (₹)", "Stock"]:
-        inv[col] = pd.to_numeric(inv[col], errors='coerce').fillna(0)
-    for col in ["Total", "Profit", "Qty"]:
-        sales[col] = pd.to_numeric(sales[col], errors='coerce').fillna(0)
-    
-    return inv, sales
-
-inv, sales = load_data()
-
-# --- 3. LOGIN LOGIC (Shortened for brevity) ---
-if 'logged_in' not in st.session_state: st.session_state.logged_in = False
-if not st.session_state.logged_in:
-    st.title("🛡️ Pharma Portal")
-    u = st.text_input("Username")
-    p = st.text_input("Password", type="password")
-    if st.button("Access Dashboard"):
-        users = pd.read_csv("users.csv")
-        if u in users['username'].values and str(p) == str(users[users['username'] == u]['password'].values[0]):
-            st.session_state.logged_in = True
-            st.session_state.username = u
-            st.rerun()
-        else: st.error("Invalid Credentials")
-    st.stop()
-
-# --- 4. DASHBOARD ---
-st.title(f"🚀 Nivesh Pharma Dashboard (User: {st.session_state.username})")
-
-t1, t2, t3, t4 = st.tabs(["🛒 Super POS", "📦 Inventory Pro", "🌿 AI Herbal Lab", "📈 Analytics"])
-
-with t1:
-    col_a, col_b = st.columns([1, 1.2])
-    with col_a:
-        st.subheader("Quick Billing")
-        if not inv.empty:
-            med = st.selectbox("Select Med", inv["Medicine"].unique(), key="pos_med_select")
-            med_data = inv[inv["Medicine"] == med].iloc[0]
-            qty = st.number_input("Quantity", 1, int(med_data["Stock"]), key="pos_qty_input")
+def login_system():
+    if not st.session_state.logged_in:
+        left, mid, right = st.columns([1, 1.2, 1])
+        with mid:
+            st.image("https://cdn-icons-png.flaticon.com/512/3209/3209101.png", width=100)
+            st.title("Pharma Enterprise Login")
             
-            if st.button("➕ Add to Cart", key="pos_add_btn"):
-                if 'cart' not in st.session_state: st.session_state.cart = []
-                st.session_state.cart.append({
-                    "Item": med, "Qty": int(qty), 
-                    "Price": float(med_data["Unit Price (₹)"]),
-                    "Cost": float(med_data["Cost Price (₹)"]), 
-                    "Total": float(qty * med_data["Unit Price (₹)"])
-                })
-                st.rerun()
-        
-    with col_b:
-        st.subheader("Invoice Summary")
-        if 'cart' in st.session_state and st.session_state.cart:
-            cart_df = pd.DataFrame(st.session_state.cart)
-            st.table(cart_df[["Item", "Qty", "Price", "Total"]])
-            
-            if st.button("🚀 Finalize & Print Bill", key="pos_finalize"):
-                for item in st.session_state.cart:
-                    inv.loc[inv["Medicine"] == item["Item"], "Stock"] -= item["Qty"]
-                    new_sale = {
-                        "Date": datetime.datetime.now().strftime("%Y-%m-%d %H:%M"),
-                        "Item": item["Item"], "Qty": item["Qty"], "Total": item["Total"],
-                        "Profit": float(item["Total"]) - (int(item["Qty"]) * float(item["Cost"])), 
-                        "User": st.session_state.username
-                    }
-                    sales = pd.concat([sales, pd.DataFrame([new_sale])], ignore_index=True)
+            with st.container(border=True):
+                user_input = st.text_input("Admin ID", placeholder="Enter username")
+                pass_input = st.text_input("Access Key", type="password", placeholder="Enter password")
                 
-                inv.to_csv("inventory.csv", index=False)
-                sales.to_csv("sales_history.csv", index=False)
-                st.session_state.cart = []
-                st.balloons()
-                st.rerun()
+                if st.button("Authenticate System"):
+                    users_db = pd.read_csv(DB_FILES["users"])
+                    # Check credentials against DB
+                    match = users_db[(users_db['username'] == user_input) & (users_db['password'] == str(pass_input))]
+                    
+                    if not match.empty:
+                        st.session_state.logged_in = True
+                        st.session_state.username = user_input
+                        st.session_state.user_role = match.iloc[0]['role']
+                        st.success("Authentication successful! Loading modules...")
+                        time.sleep(1)
+                        st.rerun()
+                    else:
+                        st.error("Access Denied: Invalid Credentials")
+            
+            st.caption("v3.0 Secure Enterprise Access | Authorized Personnel Only")
+        st.stop()
 
-with t2:
-    st.subheader("Stock Management")
-    st.dataframe(inv, use_container_width=True)
-    # Add new item form... (Keep your existing form here but use pd.concat)
-
-with t3:
-    st.subheader("🌿 AI Botanical Lab")
-    herb = st.text_input("Enter Herb Name", key="herb_input")
-    if herb and st.button("Analyze", key="ai_btn"):
-        if "GEMINI_API_KEY" in st.secrets:
-            client = genai.Client(api_key=st.secrets["GEMINI_API_KEY"])
-            response = client.models.generate_content(model="gemini-1.5-flash", contents=f"Explain {herb} uses in pharma.")
-            st.write(response.text)
-        else: st.error("API Key missing in Secrets!")
-
-with t4:
-    if not sales.empty:
-        fig = px.line(sales, x="Date", y="Profit", title="Profit Analysis")
-        st.plotly_chart(fig)
+login_system()
