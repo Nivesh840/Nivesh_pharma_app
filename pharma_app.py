@@ -11,25 +11,27 @@ st.set_page_config(page_title="Nivesh Pharma Ultra", layout="wide", page_icon="�
 
 # --- 2. DATABASE LOADING (FORCE NUMBERS) ---
 def load_data():
+    # File check aur initialization
     if not os.path.exists("inventory.csv"):
         pd.DataFrame(columns=["Medicine", "Stock", "Expiry Date", "Unit Price (₹)", "Cost Price (₹)", "Category"]).to_csv("inventory.csv", index=False)
     if not os.path.exists("sales_history.csv"):
         pd.DataFrame(columns=["Date", "Item", "Qty", "Total", "Profit", "User"]).to_csv("sales_history.csv", index=False)
-    if not os.path.exists("users.csv"):
-        pd.DataFrame([{"username": "nivesh", "password": "pharma2026"}]).to_csv("users.csv", index=False)
-
+    
     inv = pd.read_csv("inventory.csv")
     sales = pd.read_csv("sales_history.csv")
     
-    # Force Numbers (Safe conversion)
-    for col in ["Unit Price (₹)", "Cost Price (₹)", "Stock"]:
-        inv[col] = pd.to_numeric(inv[col], errors='coerce').fillna(0)
-    for col in ["Total", "Profit", "Qty"]:
-        sales[col] = pd.to_numeric(sales[col], errors='coerce').fillna(0)
+    # Safe Numeric Conversion (Sirf tabhi jab column maujood ho)
+    inv_cols = ["Unit Price (₹)", "Cost Price (₹)", "Stock"]
+    for col in inv_cols:
+        if col in inv.columns:
+            inv[col] = pd.to_numeric(inv[col], errors='coerce').fillna(0)
+            
+    sales_cols = ["Total", "Profit", "Qty"]
+    for col in sales_cols:
+        if col in sales.columns:
+            sales[col] = pd.to_numeric(sales[col], errors='coerce').fillna(0)
     
     return inv, sales
-
-inv, sales = load_data()
 
 # --- 3. LOGIN LOGIC (Shortened for brevity) ---
 if 'logged_in' not in st.session_state: st.session_state.logged_in = False
