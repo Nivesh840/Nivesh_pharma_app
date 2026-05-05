@@ -6,12 +6,9 @@ import plotly.express as px
 from google import genai
 from fpdf import FPDF
 
-# --- 1. SETTINGS ---
-st.set_page_config(page_title="Nivesh Pharma Ultra", layout="wide", page_icon="💊")
-
-# --- 2. DATABASE LOADING (FORCE NUMBERS) ---
+# --- 1. DATA LOADING FUNCTION ---
 def load_data():
-    # File check aur initialization
+    # Files check aur initialization
     if not os.path.exists("inventory.csv"):
         pd.DataFrame(columns=["Medicine", "Stock", "Expiry Date", "Unit Price (₹)", "Cost Price (₹)", "Category"]).to_csv("inventory.csv", index=False)
     if not os.path.exists("sales_history.csv"):
@@ -20,21 +17,20 @@ def load_data():
     inv = pd.read_csv("inventory.csv")
     sales = pd.read_csv("sales_history.csv")
     
-    # Safe Numeric Conversion (Sirf tabhi jab column maujood ho)
-    inv_cols = ["Unit Price (₹)", "Cost Price (₹)", "Stock"]
-    for col in inv_cols:
+    # Safe Numeric Conversion
+    for col in ["Unit Price (₹)", "Cost Price (₹)", "Stock"]:
         if col in inv.columns:
             inv[col] = pd.to_numeric(inv[col], errors='coerce').fillna(0)
-            
-    sales_cols = ["Total", "Profit", "Qty"]
-    for col in sales_cols:
+    for col in ["Total", "Profit", "Qty"]:
         if col in sales.columns:
             sales[col] = pd.to_numeric(sales[col], errors='coerce').fillna(0)
     
     return inv, sales
 
-# --- 3. LOGIN LOGIC (Shortened for brevity) ---
-if 'logged_in' not in st.session_state: st.session_state.logged_in = False
+# --- 2. LOGIN CHECK ---
+if 'logged_in' not in st.session_state:
+    st.session_state.logged_in = False
+
 if not st.session_state.logged_in:
     st.title("🛡️ Pharma Portal")
     u = st.text_input("Username")
@@ -45,13 +41,13 @@ if not st.session_state.logged_in:
             st.session_state.logged_in = True
             st.session_state.username = u
             st.rerun()
-        else: st.error("Invalid Credentials")
+        else:
+            st.error("Invalid Credentials")
     st.stop()
 
-# --- 4. DASHBOARD ---
-st.title(f"🚀 Nivesh Pharma Dashboard (User: {st.session_state.username})")
-
-t1, t2, t3, t4 = st.tabs(["🛒 Super POS", "📦 Inventory Pro", "🌿 AI Herbal Lab", "📈 Analytics"])
+# --- 3. LOAD DATA (ONLY AFTER LOGIN) ---
+# Ye line ab line 60 ke error ko fix karegi kyunki 'inv' hamesha login ke baad load hoga
+inv, sales = load_data()
 
 with t1:
     col_a, col_b = st.columns([1, 1.2])
