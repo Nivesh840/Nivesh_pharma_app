@@ -23,24 +23,18 @@ st.markdown("""
 DB_FILES = {"inv": "inventory.csv", "sales": "sales_history.csv", "users": "users.csv"}
 
 def load_enterprise_data():
-    if not os.path.exists(DB_FILES["inv"]):
-        pd.DataFrame(columns=["Medicine", "Stock", "Expiry Date", "Unit Price (₹)", "Cost Price (₹)", "Category"]).to_csv(DB_FILES["inv"], index=False)
-    if not os.path.exists(DB_FILES["sales"]):
-        pd.DataFrame(columns=["Date", "Item", "Qty", "Total", "Profit", "User"]).to_csv(DB_FILES["sales"], index=False)
+    # ... purana code ...
+    
+    # Users file check aur repair logic
     if not os.path.exists(DB_FILES["users"]):
         pd.DataFrame([{"username": "admin", "password": "pharma2026", "role": "Owner"}]).to_csv(DB_FILES["users"], index=False)
-
-    inv = pd.read_csv(DB_FILES["inv"])
-    sales = pd.read_csv(DB_FILES["sales"])
-    
-    for col in ["Unit Price (₹)", "Cost Price (₹)", "Stock"]:
-        if col in inv.columns: inv[col] = pd.to_numeric(inv[col], errors='coerce').fillna(0)
-    for col in ["Total", "Profit", "Qty"]:
-        if col in sales.columns: sales[col] = pd.to_numeric(sales[col], errors='coerce').fillna(0)
-    
-    return inv, sales
-
-inv, sales = load_enterprise_data()
+    else:
+        try:
+            # File ko read karke check karein
+            pd.read_csv(DB_FILES["users"])
+        except:
+            # Agar error aaye (ParserError), toh file ko reset kar dein
+            pd.DataFrame([{"username": "admin", "password": "pharma2026", "role": "Owner"}]).to_csv(DB_FILES["users"], index=False)
 
 # ==========================================
 # 3. MASTER AUTH & SIGNUP SYSTEM
