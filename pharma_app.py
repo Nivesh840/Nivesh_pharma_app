@@ -109,21 +109,8 @@ t1, t2, t3, t4 = st.tabs(["🛒 Super POS", "📦 Inventory Pro", "🌿 AI Herba
 # --- TAB 1: SUPER POS (FAST BILLING) ---
 with t1:
     col_a, col_b = st.columns([1, 1.2])
-        
-    with col_b:
-        st.subheader("Invoice Summary")
-        if 'cart' in st.session_state and st.session_state.cart:
-            cart_df = pd.DataFrame(st.session_state.cart)
-            st.dataframe(cart_df[["Item", "Qty", "Price", "Total"]], use_container_width=True)
-            
-            total_amt = cart_df["Total"].sum()
-            st.header(f"Total: ₹{total_amt}")
-            
-        # --- TAB 1: SUPER POS (No Duplicate ID Version) ---
-with t1:
-    col_a, col_b = st.columns([1, 1.2])
-    
-    with col_a:
+
+     with col_a:
         st.subheader("Quick Billing")
         if not inv.empty:
             # UNIQUE KEY: 'pos_med_select'
@@ -152,6 +139,19 @@ with t1:
                 st.rerun()
         else:
             st.warning("Inventory khali hai!")
+            
+    with col_b:
+        st.subheader("Invoice Summary")
+        if 'cart' in st.session_state and st.session_state.cart:
+            cart_df = pd.DataFrame(st.session_state.cart)
+            st.dataframe(cart_df[["Item", "Qty", "Price", "Total"]], use_container_width=True)
+            
+            total_amt = cart_df["Total"].sum()
+            st.header(f"Total: ₹{total_amt}")
+            
+        # --- TAB 1: SUPER POS (No Duplicate ID Version) ---
+with t1:
+    col_a, col_b = st.columns([1, 1.2])
         
     with col_b:
         st.subheader("Invoice Summary")
