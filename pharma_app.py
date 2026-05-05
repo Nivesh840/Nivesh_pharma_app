@@ -165,42 +165,52 @@ with t1:
                 st.session_state.cart = []
                 st.rerun()
                 
-            if cb2.button("🚀 Finalize & Print"):
-                with st.spinner("Syncing Inventory & Ledger..."):
-                    invoice_id = f"INV-{int(time.time())}"
-                    
-                    for item in st.session_state.cart:
-                        # 1. Atomic Stock Update
-                        inv.loc[inv["Medicine"] == item["Item"], "Stock"] -= item["Qty"]
-                        inv.loc[inv["Medicine"] == item["Item"], "Last Updated"] = str(datetime.date.today())
-                        
-                        # 2. Profit Calculation (Strict Numeric)
-                        profit_val = float(item["Total"]) - (int(item["Qty"]) * float(item["Cost"]))
-                        
-                        # 3. Append to Sales History
-                        new_sale = {
-                            "Date": datetime.datetime.now().strftime("%Y-%m-%d %H:%M"),
-                            "Invoice_ID": invoice_id,
-                            "Item": item["Item"],
-                            "Qty": item["Qty"],
-                            "Total": item["Total"],
-                            "Profit": profit_val,
-                            "User": st.session_state.username
-                        }
-                        sales = pd.concat([sales, pd.DataFrame([new_sale])], ignore_index=True)
-                    
-                    # 4. Save to Disk
-                    inv.to_csv(DB_FILES["inv"], index=False)
-                    sales.to_csv(DB_FILES["sales"], index=False)
-                    
-                    # Success State
-                    st.session_state.cart = []
-                    st.balloons()
-                    st.success(f"Invoice {invoice_id} generated successfully!")
-                    time.sleep(2)
-                    st.rerun()
-        else:
-            st.caption("Scan items or search to start billing.")
+           if st.button("🚀 Finalize & Record Sale", key="pos_finalize"):
+           if not st.session_state.cart:
+        st.error("Cart khali hai! Pehle items add karein.")
+      else:
+        with st.spinner("Syncing Inventory & Ledger..."):
+            invoice_id = f"INV-{int(time.time())}"
+            current_cart = st.session_state.cart.copy() # Cart ka backup
+            
+            for item in current_cart:
+                # 1. Stock Update
+                inv.loc[inv["Medicine"] == item["Item"], "Stock"] -= item["Qty"]
+                
+                # 2. Profit Calculation
+                profit_val = float(item["Total"]) - (int(item["Qty"]) * float(item["Cost"]))
+                
+                # 3. Save Sale
+                new_sale = {
+                    "Date": datetime.datetime.now().strftime("%Y-%m-%d %H:%M"),
+                    "Invoice_ID": invoice_id,
+                    "Item": item["Item"], 
+                    "Qty": item["Qty"], 
+                    "Total": item["Total"],
+                    "Profit": profit_val, 
+                    "User": st.session_state.username
+                }
+                sales = pd.concat([sales, pd.DataFrame([new_sale])], ignore_index=True)
+            
+            # 4. CSV Files Update
+            inv.to_csv(DB_FILES["inv"], index=False)
+            sales.to_csv(DB_FILES["sales"], index=False)
+            
+            # 5. Success Message & Receipt Preview
+            st.success(f"Invoice {invoice_id} Saved!")
+            
+            # Bill Preview for Manual Printing (Ctrl+P)
+            st.markdown("### 📄 Quick Receipt Preview")
+            preview_df = pd.DataFrame(current_cart)[["Item", "Qty", "Total"]]
+            st.table(preview_df)
+            st.markdown(f"**Total Amount Paid: ₹{sum(item['Total'] for item in current_cart):,.2f}**")
+            
+            # Cart Khali Karo
+            st.session_state.cart = []
+            st.balloons()
+            
+            # Tip for User
+            st.info("💡 Tip: Browser mein 'Ctrl + P' dabayein agar aapko is table ka print out chahiye.")
 
 # ==========================================
 # 5. MODULE: INVENTORY PRO (STOCK MANAGEMENT)
