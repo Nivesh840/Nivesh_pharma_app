@@ -261,3 +261,80 @@ with t2:
                     st.error("Only Owner can reset inventory.")
         else:
             st.info("No records found matching the filters.")
+
+# ==========================================
+# 6. MODULE: AI HERBAL LAB (B.PHARM SPECIAL)
+# ==========================================
+with t3:
+    st.markdown("### 🌿 AI Botanical & Clinical Analysis")
+    st.info("Powered by Gemini 1.5 Flash - Tailored for B.Pharm Pharmaceutical Research")
+    
+    # Research Workspace
+    ai_col1, ai_col2 = st.columns([1.5, 1])
+    
+    with ai_col1:
+        st.subheader("Clinical Research Portal")
+        herb_query = st.text_input(
+            "Enter Herb or Chemical Constituent Name", 
+            placeholder="e.g. Aloe Vera, Curcumin, Azadirachta indica...",
+            key="herbal_search_input"
+        )
+        
+        research_scope = st.multiselect(
+            "Select Research Scope",
+            ["Therapeutic Uses", "Side Effects", "Mechanism of Action", "Role in Cosmetics", "Phytochemistry"],
+            default=["Therapeutic Uses", "Role in Cosmetics"]
+        )
+        
+        analyze_btn = st.button("🔬 Run Deep Analysis", key="run_ai_btn")
+
+    with ai_col2:
+        st.subheader("Quick Reference Guide")
+        st.write("Is module ka use aap apne Pharmacognosy assignments aur Herbal Cosmetics projects ke liye kar sakte hain.")
+        st.caption("Tip: 'Ditch Plate Method' ya 'Fourier's Law' jaise technical terms bhi search kar sakte hain.")
+
+    # AI Processing Engine
+    if analyze_btn:
+        if not herb_query:
+            st.warning("Pehle kisi Herb ya Chemical ka naam likhein.")
+        else:
+            with st.spinner(f"Fetching Clinical Data for {herb_query}..."):
+                try:
+                    # SECRETS SE KEY UTHANA
+                    if "GEMINI_API_KEY" in st.secrets:
+                        api_key = st.secrets["GEMINI_API_KEY"]
+                        client = genai.Client(api_key=api_key)
+                        
+                        # Professional Prompt Engineering
+                        prompt = f"""
+                        As a Senior Pharmacologist, provide a detailed clinical analysis of '{herb_query}'.
+                        Scope: {', '.join(research_scope)}.
+                        Context: B.Pharm Academic Research.
+                        Language: Professional Hinglish (Mixed Hindi/English).
+                        Format: Use Bullet points and Bold headings.
+                        """
+                        
+                        response = client.models.generate_content(
+                            model="gemini-1.5-flash", 
+                            contents=prompt
+                        )
+                        
+                        # Display Results in a Professional Container
+                        st.markdown("---")
+                        st.success(f"### Research Report: {herb_query}")
+                        st.markdown(response.text)
+                        
+                        # System Log Entry
+                        log_entry = pd.DataFrame([{
+                            "Timestamp": datetime.datetime.now().strftime("%Y-%m-%d %H:%M"),
+                            "User": st.session_state.username,
+                            "Action": f"AI Research: {herb_query}",
+                            "Status": "Success"
+                        }])
+                        log_entry.to_csv("system_logs.csv", mode='a', header=False, index=False)
+                        
+                    else:
+                        st.error("❌ API Key Missing: Streamlit Cloud ke 'Secrets' mein 'GEMINI_API_KEY' add karein.")
+                except Exception as e:
+                    st.error(f"⚠️ AI Analysis Failed: {e}")
+                    st.info("Check karein ki aapka internet aur API key valid hai.")
