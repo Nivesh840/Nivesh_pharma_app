@@ -174,3 +174,90 @@ with t1:
                     st.rerun()
         else:
             st.caption("Scan items or search to start billing.")
+
+# ==========================================
+# 5. MODULE: INVENTORY PRO (STOCK MANAGEMENT)
+# ==========================================
+with t2:
+    st.markdown("### 📦 Inventory Pro: Stock & Procurement")
+    
+    # Inventory Action Tabs
+    inv_tab1, inv_tab2 = st.tabs(["➕ Add New Stock", "📊 Current Inventory"])
+    
+    with inv_tab1:
+        st.subheader("Medicine Entry Form")
+        with st.form("inventory_form", clear_on_submit=True):
+            f_col1, f_col2, f_col3 = st.columns(3)
+            
+            # Row 1: Basic Info
+            m_name = f_col1.text_input("Medicine Name", placeholder="e.g. Paracetamol 500mg")
+            m_cat = f_col2.selectbox("Category", ["Tablet", "Syrup", "Injection", "Herbal", "Cosmetic", "Surgical"])
+            m_exp = f_col3.date_input("Expiry Date", min_value=datetime.date.today())
+            
+            # Row 2: Pricing & Stock
+            f_col4, f_col5, f_col6 = st.columns(3)
+            m_stock = f_col4.number_input("Initial Stock Quantity", min_value=1, step=1)
+            m_cost = f_col5.number_input("Cost Price per Unit (₹)", min_value=0.0, format="%.2f")
+            m_price = f_col6.number_input("Selling Price per Unit (₹)", min_value=0.0, format="%.2f")
+            
+            submit_inv = st.form_submit_button("💾 Save to Cloud Inventory")
+            
+            if submit_inv:
+                if m_name:
+                    # Creating new entry
+                    new_entry = {
+                        "Medicine": m_name.strip().upper(),
+                        "Stock": int(m_stock),
+                        "Expiry Date": str(m_exp),
+                        "Unit Price (₹)": float(m_price),
+                        "Cost Price (₹)": float(m_cost),
+                        "Category": m_cat,
+                        "Last Updated": datetime.datetime.now().strftime("%Y-%m-%d")
+                    }
+                    
+                    # Update global inv and Save
+                    inv = pd.concat([inv, pd.DataFrame([new_entry])], ignore_index=True)
+                    inv.to_csv(DB_FILES["inv"], index=False)
+                    
+                    st.success(f"✅ {m_name} added successfully!")
+                    time.sleep(1)
+                    st.rerun()
+                else:
+                    st.error("Medicine Name is mandatory!")
+
+    with inv_tab2:
+        st.subheader("Real-time Stock Ledger")
+        
+        # Search & Filter Logic
+        s_col1, s_col2 = st.columns([2, 1])
+        search_query = s_col1.text_input("🔍 Search by Name", placeholder="Type medicine name...")
+        filter_cat = s_col2.selectbox("Filter Category", ["All"] + list(inv["Category"].unique()) if not inv.empty else ["All"])
+        
+        # Applying Filters
+        display_inv = inv.copy()
+        if search_query:
+            display_inv = display_inv[display_inv["Medicine"].str.contains(search_query, case=False, na=False)]
+        if filter_cat != "All":
+            display_inv = display_inv[display_inv["Category"] == filter_cat]
+            
+        if not display_inv.empty:
+            # Highlighting Low Stock & Expiry
+            def highlight_stock(s):
+                return ['background-color: #4b1a1a' if col == 'Stock' and val < 10 else '' for col, val in s.items()]
+            
+            st.dataframe(
+                display_inv.style.apply(highlight_stock, axis=1),
+                use_container_width=True,
+                hide_index=True
+            )
+            
+            # Bulk Actions
+            if st.button("🗑️ Reset Inventory (Caution)"):
+                if st.session_state.username == "admin":
+                    pd.DataFrame(columns=inv.columns).to_csv(DB_FILES["inv"], index=False)
+                    st.warning("Inventory cleared!")
+                    st.rerun()
+                else:
+                    st.error("Only Owner can reset inventory.")
+        else:
+            st.info("No records found matching the filters.")
